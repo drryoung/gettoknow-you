@@ -27,24 +27,48 @@ function formatDate(isoDate: string): string {
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
+function isExternalHref(href: string): boolean {
+  return /^https?:\/\//i.test(href);
+}
+
 function WorkItem({ work }: { work: Work }) {
+  const isPublished = work.publicationState === "published" && work.canonicalUrl;
+  const title = isPublished ? (
+    <a
+      href={work.canonicalUrl!}
+      {...(isExternalHref(work.canonicalUrl!)
+        ? { rel: "noopener noreferrer" }
+        : {})}
+    >
+      {work.title}
+    </a>
+  ) : (
+    work.title
+  );
+
   return (
     <li className="explore-list__item">
       <p className="explore-list__meta">
         <span>{TYPE_LABELS[work.type]}</span>
         <span aria-hidden="true"> · </span>
+        <span>Added </span>
         <time dateTime={work.date}>{formatDate(work.date)}</time>
       </p>
-      <h2 className="explore-list__title">
-        <a href={work.canonicalUrl} rel="noopener noreferrer">
-          {work.title}
-        </a>
-      </h2>
+      <h2 className="explore-list__title">{title}</h2>
       <p className="explore-list__summary">{work.summary}</p>
       <p className="explore-list__links">
-        <a href={work.canonicalUrl} rel="noopener noreferrer">
-          Canonical work
-        </a>
+        {isPublished ? (
+          <a
+            href={work.canonicalUrl!}
+            {...(isExternalHref(work.canonicalUrl!)
+              ? { rel: "noopener noreferrer" }
+              : {})}
+          >
+            Canonical work
+          </a>
+        ) : (
+          <span className="explore-list__developing">In development</span>
+        )}
         {work.distributionLinks.map((link) => (
           <a key={`${link.label}-${link.url}`} href={link.url} rel="noopener noreferrer">
             {link.label}
@@ -76,8 +100,8 @@ export default async function ExplorePage() {
         <p className="eyebrow">Public commons</p>
         <h1 id="explore-title">Explore</h1>
         <p className="explore-intro__lede">
-          Selected ideas, stories, practices, and projects worth keeping in the commons—not every
-          post, reminder, or temporary update.
+          Selected ideas, stories, practices, and projects worth keeping in the commons—including
+          published works and honest notes on work still taking shape.
         </p>
       </section>
 

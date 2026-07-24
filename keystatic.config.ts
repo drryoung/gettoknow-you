@@ -72,7 +72,7 @@ export default config({
       slugField: "title",
       format: { data: "yaml" },
       entryLayout: "form",
-      columns: ["type", "date", "status"],
+      columns: ["type", "publicationState", "date", "status"],
       schema: {
         title: fields.slug({
           name: {
@@ -99,13 +99,26 @@ export default config({
           defaultValue: "essay",
         }),
         date: fields.date({
-          label: "Date",
+          label: "Added date",
+          description:
+            "Date this record was added to the commons (not necessarily a publication date).",
           validation: { isRequired: true },
         }),
-        canonicalUrl: fields.url({
+        publicationState: fields.select({
+          label: "Publication state",
+          options: [
+            { label: "Published", value: "published" },
+            { label: "Developing", value: "developing" },
+          ],
+          defaultValue: "developing",
+          description:
+            "Published works need a canonical URL. Developing works are honest signposts and may omit the URL.",
+        }),
+        canonicalUrl: fields.text({
           label: "Canonical URL",
-          description: "Primary location of this work.",
-          validation: { isRequired: true },
+          description:
+            "Required for published works. Use an absolute https URL, or a site path such as /. Leave blank for developing works. Do not invent URLs.",
+          validation: { length: { max: 500 } },
         }),
         distributionLinks: fields.array(
           fields.object({

@@ -418,6 +418,11 @@ h3 {
   color: var(--accent);
 }
 
+.explore-list__developing {
+  color: var(--muted);
+  font-style: italic;
+}
+
 .footer {
   display: grid;
   gap: 1.25rem;

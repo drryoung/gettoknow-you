@@ -49,16 +49,22 @@ content/works/*
 
 Social adaptations belong as **distribution links** on a work, not as separate entries. Ephemeral posts normally stay out of this collection.
 
+Works may be **published** (verified URL required) or **developing** (honest signpost; URL optional). The date field is when the record was added to the commons.
+
 ### Founder workflow for works
 
 1. Run the local site (`npm run dev`).
 2. Open `/keystatic`.
 3. Add or edit a work under **Works**.
-4. Attach optional distribution links (for example Xiaohongshu or Instagram).
-5. Set status to `listed` (shows on `/explore`) or `archived` (hidden, kept in Git).
-6. Review the Git changes under `content/works/`.
-7. Run validation (`npm run typecheck`, `npm test`, `npm run build`).
-8. Commit and publish through the existing Git workflow.
+4. Choose publication state:
+   * **Published** — add a verified canonical URL (https link or site path such as `/`).
+   * **Developing** — leave the URL blank; Explore will show “In development”.
+5. Attach optional distribution links (for example Xiaohongshu or Instagram).
+6. Set status to `listed` (shows on `/explore`) or `archived` (hidden, kept in Git).
+7. To convert developing → published later: add a verified URL and set publication state to `published`.
+8. Review the Git changes under `content/works/`.
+9. Run validation (`npm run typecheck`, `npm test`, `npm run build`).
+10. Commit and publish through the existing Git workflow.
 
 Production Keystatic editing is **not** available. The editor and its API return 404 in production.
 

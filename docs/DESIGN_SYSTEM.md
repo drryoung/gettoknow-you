@@ -28,8 +28,9 @@ GetToKnow.You reuses the **design language** of MandarinOS.app, not the Mandarin
 * Homepage Explore pathway stays **secondary** (after the charter document or in the closing area)—never a hero CTA
 * The charter remains visually dominant on `/`
 * Reuse current typography, spacing, colour tokens, and thread motifs; do not invent a second visual system
-* On Explore, **title and summary** dominate; type and date stay subordinate metadata
-* The **canonical link** is primary; distribution links are secondary
+* On Explore, **title and summary** dominate; type and added date stay subordinate metadata
+* The **canonical link** is primary for published works; distribution links are secondary
+* Developing works use a restrained italic **“In development”** label—clear, secondary, not disabled-looking—and never an empty or fake link
 * Preserve responsive readability and hierarchy on mobile and desktop
 * Empty Explore state should feel calm and unfinished-on-purpose, not promotional
 

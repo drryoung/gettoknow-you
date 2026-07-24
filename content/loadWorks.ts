@@ -3,6 +3,8 @@
  *
  * Reads the Keystatic `works` collection and returns only listed entries,
  * sorted by date descending. Separate from the Community Charter domain.
+ *
+ * Published works require a canonical URL. Developing works may omit it.
  */
 import { createReader } from "@keystatic/core/reader";
 import path from "path";
@@ -23,6 +25,8 @@ export type WorkType = (typeof WORK_TYPES)[number];
 
 export type WorkStatus = "listed" | "archived";
 
+export type PublicationState = "published" | "developing";
+
 export type DistributionLink = {
   label: string;
   url: string;
@@ -34,9 +38,24 @@ export type Work = {
   summary: string;
   type: WorkType;
   date: string;
-  canonicalUrl: string;
+  publicationState: PublicationState;
+  /** Present for published works; null for developing works. */
+  canonicalUrl: string | null;
   distributionLinks: DistributionLink[];
   status: WorkStatus;
+};
+
+/** Raw entry shape used by normalizeWork (Keystatic reader or fixtures). */
+export type WorkEntryInput = {
+  slug: string;
+  title?: string | null;
+  summary?: string | null;
+  type?: string | null;
+  date?: string | null;
+  publicationState?: string | null;
+  canonicalUrl?: string | null;
+  distributionLinks?: ReadonlyArray<{ label: string | null; url: string | null }> | null;
+  status?: string | null;
 };
 
 function isWorkType(value: string): value is WorkType {
@@ -45,6 +64,10 @@ function isWorkType(value: string): value is WorkType {
 
 function isWorkStatus(value: string): value is WorkStatus {
   return value === "listed" || value === "archived";
+}
+
+function isPublicationState(value: string): value is PublicationState {
+  return value === "published" || value === "developing";
 }
 
 function normalizeDistributionLinks(
@@ -58,6 +81,42 @@ function normalizeDistributionLinks(
     if (label && url) out.push({ label, url });
   }
   return out;
+}
+
+/**
+ * Normalise one collection entry.
+ * Returns null when required fields are missing, or when a published work
+ * has no canonical URL (excluded safely rather than shown as broken).
+ */
+export function normalizeWork(input: WorkEntryInput): Work | null {
+  const title = input.title?.trim();
+  const summary = input.summary?.trim();
+  const type = input.type?.trim() ?? "";
+  const date = input.date?.trim();
+  const publicationState = input.publicationState?.trim() ?? "";
+  const status = input.status?.trim() ?? "";
+  const canonicalUrl = input.canonicalUrl?.trim() || null;
+
+  if (!title || !summary || !date) return null;
+  if (!isWorkType(type) || !isWorkStatus(status) || !isPublicationState(publicationState)) {
+    return null;
+  }
+
+  if (publicationState === "published" && !canonicalUrl) {
+    return null;
+  }
+
+  return {
+    slug: input.slug,
+    title,
+    summary,
+    type,
+    date,
+    publicationState,
+    canonicalUrl: publicationState === "developing" ? null : canonicalUrl,
+    distributionLinks: normalizeDistributionLinks(input.distributionLinks),
+    status,
+  };
 }
 
 /**
@@ -80,26 +139,18 @@ export async function getListedWorks(): Promise<Work[]> {
   const works: Work[] = [];
 
   for (const { slug, entry } of entries) {
-    const title = entry.title?.trim();
-    const summary = entry.summary?.trim();
-    const type = entry.type;
-    const date = entry.date?.trim();
-    const canonicalUrl = entry.canonicalUrl?.trim();
-    const status = entry.status;
-
-    if (!title || !summary || !date || !canonicalUrl) continue;
-    if (!isWorkType(type) || !isWorkStatus(status)) continue;
-
-    works.push({
+    const work = normalizeWork({
       slug,
-      title,
-      summary,
-      type,
-      date,
-      canonicalUrl,
-      distributionLinks: normalizeDistributionLinks(entry.distributionLinks),
-      status,
+      title: typeof entry.title === "string" ? entry.title : null,
+      summary: entry.summary,
+      type: entry.type,
+      date: entry.date,
+      publicationState: entry.publicationState,
+      canonicalUrl: entry.canonicalUrl,
+      distributionLinks: entry.distributionLinks,
+      status: entry.status,
     });
+    if (work) works.push(work);
   }
 
   return selectListedWorks(works);

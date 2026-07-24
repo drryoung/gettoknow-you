@@ -25,10 +25,23 @@ A work record represents a **canonical work**—a substantial idea or artefact w
 
 **Ephemeral communications** (announcements, reminders, comments, minor variants, temporary updates) should normally remain outside the permanent works collection.
 
+### Publication state
+
+| State | Meaning | Canonical URL |
+|---|---|---|
+| `published` | A verified work or signpost with a real destination | Required (absolute https URL or a site path such as `/`) |
+| `developing` | An honest description of work still taking shape | Optional; omit rather than invent |
+
+Developing entries are **signposts**, not claims that a finished publication already exists. They may later be revised, given a verified URL and marked `published`, replaced, or `archived`.
+
+Do not invent external URLs. Published works without a usable URL are excluded by the loader rather than shown as broken links.
+
 ### Lifecycle
 
 * `listed` — appears on `/explore` through `getListedWorks()`
 * `archived` — remains in the repository for history, but is excluded from `/explore`
+
+The `date` field is the date the record was **added** to the commons, not necessarily a publication date.
 
 Explore content must come through the approved loader (`content/loadWorks.ts`). Do not hard-code work titles, summaries, or URLs in page components.
 
