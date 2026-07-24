@@ -1,0 +1,28 @@
+{
+  "name": "gettoknow-you",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@keystatic/core": "^0.6.0",
+    "@keystatic/next": "^5.0.4",
+    "@markdoc/markdoc": "^0.5.8",
+    "next": "^15.2.8",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.10",
+    "@types/react": "19.0.10",
+    "@types/react-dom": "19.0.4",
+    "typescript": "5.8.2",
+    "vitest": "^2.1.9"
+  }
+}
