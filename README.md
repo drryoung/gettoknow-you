@@ -1,6 +1,6 @@
 # GetToKnow.You
 
-Public website for the **GetToKnow.You Community Charter**.
+Public website for the **GetToKnow.You Community Charter**, with the first foundation of a **public commons** at `/explore`.
 
 This repository is separate from MandarinOS.app. It reuses design-language principles from that site without cloning the MandarinOS product website.
 
@@ -14,6 +14,7 @@ npm run dev
 Then open:
 
 * Website: [http://localhost:3000](http://localhost:3000)
+* Explore: [http://localhost:3000/explore](http://localhost:3000/explore)
 * Keystatic editor: [http://localhost:3000/keystatic](http://localhost:3000/keystatic)
 
 ## Charter content
@@ -38,6 +39,29 @@ Open that file, change wording, save, and refresh the homepage.
 
 Saving in Keystatic updates repository files. It does **not** publish the live site. Commit and push when you are ready to deploy.
 
+## Curated works (public commons)
+
+Canonical works for `/explore` live in the Keystatic **Works** collection:
+
+```text
+content/works/*
+```
+
+Social adaptations belong as **distribution links** on a work, not as separate entries. Ephemeral posts normally stay out of this collection.
+
+### Founder workflow for works
+
+1. Run the local site (`npm run dev`).
+2. Open `/keystatic`.
+3. Add or edit a work under **Works**.
+4. Attach optional distribution links (for example Xiaohongshu or Instagram).
+5. Set status to `listed` (shows on `/explore`) or `archived` (hidden, kept in Git).
+6. Review the Git changes under `content/works/`.
+7. Run validation (`npm run typecheck`, `npm test`, `npm run build`).
+8. Commit and publish through the existing Git workflow.
+
+Production Keystatic editing is **not** available. The editor and its API return 404 in production.
+
 ## Scripts
 
 | Command | Purpose |
@@ -52,3 +76,4 @@ Saving in Keystatic updates repository files. It does **not** publish the live s
 
 * [Design system](docs/DESIGN_SYSTEM.md)
 * [Content governance](docs/CONTENT_GOVERNANCE.md)
+* [Public commons architecture](docs/PUBLIC_COMMONS_ARCHITECTURE.md)

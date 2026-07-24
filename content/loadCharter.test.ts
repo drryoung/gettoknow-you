@@ -93,4 +93,22 @@ describe("homepage presentation boundaries", () => {
     expect(page).not.toContain("How to Win Friends and Influence People");
     expect(page).not.toContain("Does it help people become genuinely curious");
   });
+
+  it("keeps a restrained Explore pathway without replacing charter authority", () => {
+    const page = readFileSync(path.join(root, "app/page.tsx"), "utf8");
+    expect(page).toContain('href="/explore"');
+    expect(page).toContain("getCommunityCharter");
+    expect(page).not.toContain("getListedWorks");
+  });
+});
+
+describe("charter domain isolation from curated works", () => {
+  it("does not treat the works collection as a charter source", () => {
+    const config = readFileSync(path.join(root, "keystatic.config.ts"), "utf8");
+    expect(config).toContain("communityCharter");
+    expect(config).toContain("works");
+    expect(existsSync(path.join(root, "content/community-charter.mdoc"))).toBe(true);
+    expect(existsSync(path.join(root, "content/works/community-charter.yaml"))).toBe(false);
+    expect(existsSync(path.join(root, "content/works/community-charter.mdoc"))).toBe(false);
+  });
 });

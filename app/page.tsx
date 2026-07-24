@@ -125,6 +125,13 @@ export default async function Home() {
         <CharterBody body={charter.body} />
       </article>
 
+      <section className="screen shell explore-pathway" aria-label="Explore the public commons">
+        <p className="eyebrow">Public commons</p>
+        <p className="explore-pathway__text">
+          <a href="/explore">Explore selected ideas, stories and projects</a>
+        </p>
+      </section>
+
       <footer className="footer shell">
         <div>
           <b>GetToKnow.You</b>

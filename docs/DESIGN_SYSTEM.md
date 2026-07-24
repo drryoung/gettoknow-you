@@ -22,6 +22,17 @@ GetToKnow.You reuses the **design language** of MandarinOS.app, not the Mandarin
 * Pull treatment for the two Vision statements without inventing new copy
 * Source Serif 4 / Source Sans 3 as the GetToKnow.You type pairing
 
+## Explore and public commons (this increment)
+
+* `/explore` uses an **editorial list**, not a product-card grid
+* Homepage Explore pathway stays **secondary** (after the charter document or in the closing area)—never a hero CTA
+* The charter remains visually dominant on `/`
+* Reuse current typography, spacing, colour tokens, and thread motifs; do not invent a second visual system
+* On Explore, **title and summary** dominate; type and date stay subordinate metadata
+* The **canonical link** is primary; distribution links are secondary
+* Preserve responsive readability and hierarchy on mobile and desktop
+* Empty Explore state should feel calm and unfinished-on-purpose, not promotional
+
 ## Deliberately excluded
 
 * MandarinOS product sections (meals, staples, personas, testimonials, beta challenge)
@@ -30,3 +41,4 @@ GetToKnow.You reuses the **design language** of MandarinOS.app, not the Mandarin
 * Product CTAs and “Join the Beta” patterns
 * Language-learning UI motifs and Chinese/pinyin dialogue layouts
 * Production CMS editing, authentication, analytics, and databases
+* MandarinOS-style feature/product card grids on Explore

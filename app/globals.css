@@ -297,6 +297,127 @@ h3 {
   color: var(--ink);
 }
 
+.explore-pathway {
+  padding-top: clamp(40px, 7vw, 72px);
+  padding-bottom: clamp(40px, 7vw, 72px);
+  border-top: 1px solid var(--line);
+}
+
+.explore-pathway__text {
+  margin: 0.65rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  letter-spacing: -0.035em;
+  line-height: 1.25;
+  max-width: var(--measure-reading);
+}
+
+.explore-pathway__text a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.explore-pathway__text a:hover {
+  color: var(--accent);
+}
+
+.explore-intro {
+  padding-top: clamp(72px, 12vw, 120px);
+  padding-bottom: clamp(28px, 5vw, 48px);
+  max-width: var(--measure-editorial);
+}
+
+.explore-intro h1 {
+  margin: 0.35rem 0 0;
+}
+
+.explore-intro__lede {
+  margin: 1.1rem 0 0;
+  color: var(--muted);
+  max-width: 42ch;
+  font-size: 1.05rem;
+}
+
+.explore {
+  padding-top: 0;
+  padding-bottom: clamp(56px, 10vw, 104px);
+  max-width: var(--measure-editorial);
+}
+
+.explore-empty {
+  margin: 0;
+  padding: 1.5rem 0 0.5rem;
+  color: var(--muted);
+  max-width: 40ch;
+  border-top: 1px solid var(--line);
+}
+
+.explore-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.explore-list__item {
+  padding: 1.65rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.explore-list__item:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.explore-list__meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+}
+
+.explore-list__title {
+  margin: 0.45rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 2.6vw, 2.05rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.explore-list__title a:hover {
+  color: var(--accent);
+}
+
+.explore-list__summary {
+  margin: 0.7rem 0 0;
+  max-width: 46ch;
+  color: var(--ink);
+}
+
+.explore-list__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.15rem;
+  margin: 1rem 0 0;
+  font-size: 0.95rem;
+}
+
+.explore-list__links a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+}
+
+.explore-list__links a:first-child {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.explore-list__links a:hover {
+  color: var(--accent);
+}
+
 .footer {
   display: grid;
   gap: 1.25rem;
