@@ -38,7 +38,7 @@ describe("Community Charter content authority", () => {
     expect(data?.status).toBe("Working Draft");
   });
 
-  it("maps charter content for homepage rendering", async () => {
+  it("maps charter content for /charter rendering", async () => {
     const charter = await getCommunityCharter();
     expect(charter.title).toContain("GetToKnow.You");
     expect(charter.version).toBe("0.1");
@@ -85,20 +85,44 @@ describe("Keystatic local safety", () => {
   });
 });
 
-describe("homepage presentation boundaries", () => {
-  it("does not hard-code charter body copy in page.tsx", () => {
-    const page = readFileSync(path.join(root, "app/page.tsx"), "utf8");
+describe("charter route and homepage boundaries", () => {
+  it("renders the Charter at /charter from the sole loader", () => {
+    const page = readFileSync(path.join(root, "app/charter/page.tsx"), "utf8");
     expect(page).toContain("getCommunityCharter");
+    expect(page).toContain("CharterBody");
     expect(page).not.toContain("Be genuinely curious");
     expect(page).not.toContain("How to Win Friends and Influence People");
     expect(page).not.toContain("Does it help people become genuinely curious");
   });
 
-  it("keeps a restrained Explore pathway without replacing charter authority", () => {
+  it("does not hard-code or reproduce Charter body prose on the homepage", () => {
     const page = readFileSync(path.join(root, "app/page.tsx"), "utf8");
-    expect(page).toContain('href="/explore"');
-    expect(page).toContain("getCommunityCharter");
-    expect(page).not.toContain("getListedWorks");
+    expect(page).not.toContain("getCommunityCharter");
+    expect(page).not.toContain("Be genuinely curious");
+    expect(page).not.toContain("How to Win Friends and Influence People");
+    expect(page).not.toContain("Five Principles");
+    expect(page).not.toContain("Decision Test");
+    expect(page).toContain('href="/charter"');
+    expect(page).toContain("getHomepageFeatured");
+  });
+
+  it("keeps primary navigation on the five visitor pathways", () => {
+    const header = readFileSync(path.join(root, "app/components/SiteHeader.tsx"), "utf8");
+    expect(header).toContain('href: "/explore"');
+    expect(header).toContain('href: "/read"');
+    expect(header).toContain('href: "/try"');
+    expect(header).toContain('href: "/meet"');
+    expect(header).toContain('href: "/about"');
+    expect(header).not.toContain('href: "/charter"');
+  });
+
+  it("exposes the visitor pathway routes", () => {
+    expect(existsSync(path.join(root, "app/read/page.tsx"))).toBe(true);
+    expect(existsSync(path.join(root, "app/try/page.tsx"))).toBe(true);
+    expect(existsSync(path.join(root, "app/meet/page.tsx"))).toBe(true);
+    expect(existsSync(path.join(root, "app/about/page.tsx"))).toBe(true);
+    expect(existsSync(path.join(root, "app/charter/page.tsx"))).toBe(true);
+    expect(existsSync(path.join(root, "app/explore/page.tsx"))).toBe(true);
   });
 });
 

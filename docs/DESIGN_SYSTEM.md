@@ -11,28 +11,41 @@ GetToKnow.You reuses the **design language** of MandarinOS.app, not the Mandarin
 * Sticky translucent navigation and calm footer framing
 * Section screens with hairline borders and spacious vertical rhythm
 * Eyebrow labels, restrained motion (`prefers-reduced-motion` respected)
-* Responsive collapse of secondary nav on smaller viewports
+* Responsive primary navigation that wraps rather than disappearing on smaller viewports
 * Local-only Keystatic Admin UI with production 404 guards
+
+## Visitor-centred hierarchy
+
+1. The human proposition comes first on the homepage
+2. Five action-based pathways (Explore, Read, Try, Meet, About) are immediately understandable
+3. Current curated material is visible without pretending the commons is finished
+4. Governance (Community Charter) is available but visually secondary—linked from Meet, About, and the footer, and fully presented at `/charter`
+
+The site should feel warm, thoughtful, spacious, human, editorial, and quietly optimistic. It should not feel like a constitution landing page, a SaaS product site, a language-learning app, a corporate consultancy, or an empty forum.
 
 ## Adapted for this site
 
-* Charter-first homepage (hero + document flow) instead of product storytelling
-* Principle blocks as sequential headings, not product feature cards
-* Ecosystem downward flow using the charter’s own `↓` markers
-* Pull treatment for the two Vision statements without inventing new copy
+* Welcome homepage (hero + pathways + featured previews) instead of product storytelling or constitution-first arrival
+* Editorial pathway lists, not software feature cards
+* Charter document flow retained on `/charter` with pull treatment for the two Vision statements
 * Source Serif 4 / Source Sans 3 as the GetToKnow.You type pairing
 
-## Explore and public commons (this increment)
+## Explore and public commons
 
-* `/explore` uses an **editorial list**, not a product-card grid
-* Homepage Explore pathway stays **secondary** (after the charter document or in the closing area)—never a hero CTA
-* The charter remains visually dominant on `/`
-* Reuse current typography, spacing, colour tokens, and thread motifs; do not invent a second visual system
-* On Explore, **title and summary** dominate; type and added date stay subordinate metadata
+* `/explore`, `/read`, and `/try` use an **editorial list**, not a product-card grid
+* Pathway presentation on the homepage is sequential editorial links, not a SaaS-card grid
+* On work lists, **title and summary** dominate; type and added date stay subordinate metadata
 * The **canonical link** is primary for published works; distribution links are secondary
 * Developing works use a restrained italic **“In development”** label—clear, secondary, not disabled-looking—and never an empty or fake link
 * Preserve responsive readability and hierarchy on mobile and desktop
-* Empty Explore state should feel calm and unfinished-on-purpose, not promotional
+* Empty states should feel calm and unfinished-on-purpose, not promotional
+
+## Homepage warmth and accessibility
+
+* First viewport: brand, one clear invitation, short supporting sentence, primary Explore CTA, optional MandarinOS secondary link, thread atmosphere
+* Keyboard focus remains visible; do not suppress outlines
+* Avoid horizontal overflow; navigation wraps on narrow widths
+* External links that open off-site use safe `rel` behaviour where appropriate
 
 ## Deliberately excluded
 
@@ -42,4 +55,4 @@ GetToKnow.You reuses the **design language** of MandarinOS.app, not the Mandarin
 * Product CTAs and “Join the Beta” patterns
 * Language-learning UI motifs and Chinese/pinyin dialogue layouts
 * Production CMS editing, authentication, analytics, and databases
-* MandarinOS-style feature/product card grids on Explore
+* MandarinOS-style feature/product card grids on Explore or pathway pages

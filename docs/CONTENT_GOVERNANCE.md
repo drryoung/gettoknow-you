@@ -4,6 +4,8 @@
 
 `content/community-charter.mdoc` is the **only** authoritative source for Community Charter wording.
 
+The Charter is presented at `/charter`. Moving its presentation off the homepage does **not** alter content authority.
+
 Do not maintain a second copy in TypeScript, JSON, YAML, JSX, a database, or another CMS as a competing source of truth.
 
 ## Content domains
@@ -13,7 +15,7 @@ GetToKnow.You keeps two separate content domains:
 | Domain | Authority | Purpose |
 |---|---|---|
 | Community Charter | `content/community-charter.mdoc` only | Constitutional foundation of the community |
-| Curated works | Keystatic `works` collection under `content/works/*` | Canonical public-commons entries shown on `/explore` |
+| Curated works | Keystatic `works` collection under `content/works/*` | Canonical public-commons entries for Explore / Read / Try / Meet |
 
 Curated works must never become a second charter. Charter wording must never be duplicated into work records, page components, or TypeScript constants.
 
@@ -29,7 +31,7 @@ A work record represents a **canonical work**—a substantial idea or artefact w
 
 | State | Meaning | Canonical URL |
 |---|---|---|
-| `published` | A verified work or signpost with a real destination | Required (absolute https URL or a site path such as `/`) |
+| `published` | A verified work or signpost with a real destination | Required (absolute https URL or a site path such as `/charter`) |
 | `developing` | An honest description of work still taking shape | Optional; omit rather than invent |
 
 Developing entries are **signposts**, not claims that a finished publication already exists. They may later be revised, given a verified URL and marked `published`, replaced, or `archived`.
@@ -38,12 +40,27 @@ Do not invent external URLs. Published works without a usable URL are excluded b
 
 ### Lifecycle
 
-* `listed` — appears on `/explore` through `getListedWorks()`
-* `archived` — remains in the repository for history, but is excluded from `/explore`
+* `listed` — available through `getListedWorks()` for Explore and pathway pages
+* `archived` — remains in the repository for history, but is excluded from public lists
 
 The `date` field is the date the record was **added** to the commons, not necessarily a publication date.
 
-Explore content must come through the approved loader (`content/loadWorks.ts`). Do not hard-code work titles, summaries, or URLs in page components.
+Work titles, summaries, and URLs must come through the approved loader (`content/loadWorks.ts`). Do not hard-code work copy in page components.
+
+### Pathway placement
+
+Read / Try / Meet select approved works through a presentation-level slug map (`content/sitePathways.ts`). This keeps editing simple while the taxonomy is still young. Do not invent multiple theme systems in content files for this increment.
+
+## Page framing copy
+
+Short interface and route-framing copy (hero lines, pathway blurbs, empty states) may live in page components.
+
+Substantial editable prose belongs in:
+
+* the Charter Markdoc file; or
+* curated work YAML entries.
+
+Do not bury long durable essays in TSX.
 
 ## How to edit ordinary wording
 

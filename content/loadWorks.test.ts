@@ -91,14 +91,14 @@ describe("normalizeWork", () => {
     const result = normalizeWork({
       slug: "signpost",
       title: "Signpost",
-      summary: "Points at the homepage.",
+      summary: "Points at the charter page.",
       type: "other",
       date: "2026-07-25",
       publicationState: "published",
-      canonicalUrl: "/",
+      canonicalUrl: "/charter",
       status: "listed",
     });
-    expect(result?.canonicalUrl).toBe("/");
+    expect(result?.canonicalUrl).toBe("/charter");
   });
 
   it("ignores a canonical URL provided on a developing entry, so no link is ever shown", () => {
@@ -240,7 +240,7 @@ describe("getListedWorks", () => {
     const bySlug = Object.fromEntries(works.map((w) => [w.slug, w]));
     expect(bySlug.mandarinos?.publicationState).toBe("published");
     expect(bySlug.mandarinos?.canonicalUrl).toBe("https://www.mandarinos.app/");
-    expect(bySlug["gettoknowyou-community-charter"]?.canonicalUrl).toBe("/");
+    expect(bySlug["gettoknowyou-community-charter"]?.canonicalUrl).toBe("/charter");
     expect(bySlug.conversationos?.publicationState).toBe("developing");
     expect(bySlug.conversationos?.canonicalUrl).toBeNull();
   });
@@ -259,18 +259,31 @@ describe("works collection boundaries", () => {
 
   it("loads Explore content through the works loader without hard-coded work copy", () => {
     const page = readFileSync(path.join(root, "app/explore/page.tsx"), "utf8");
+    const list = readFileSync(path.join(root, "app/components/WorkList.tsx"), "utf8");
     expect(page).toContain("getListedWorks");
-    expect(page).toContain("work.title");
-    expect(page).toContain("work.summary");
-    expect(page).toContain("In development");
+    expect(page).toContain("WorkList");
+    expect(list).toContain("work.title");
+    expect(list).toContain("work.summary");
+    expect(list).toContain("In development");
     expect(page).not.toContain("canonicalUrl: \"http");
     expect(page).not.toContain("summary: \"");
     expect(page).not.toContain("MandarinOS is the first practical");
   });
 
   it("does not render a developing entry as an empty canonical link in the page source", () => {
-    const page = readFileSync(path.join(root, "app/explore/page.tsx"), "utf8");
-    expect(page).toContain("explore-list__developing");
-    expect(page).toContain('publicationState === "published"');
+    const list = readFileSync(path.join(root, "app/components/WorkList.tsx"), "utf8");
+    expect(list).toContain("explore-list__developing");
+    expect(list).toContain('publicationState === "published"');
+  });
+
+  it("keeps Read and Try pages loader-driven without duplicated work copy", () => {
+    const read = readFileSync(path.join(root, "app/read/page.tsx"), "utf8");
+    const tryPage = readFileSync(path.join(root, "app/try/page.tsx"), "utf8");
+    expect(read).toContain('getPathwayWorks("read")');
+    expect(tryPage).toContain('getPathwayWorks("try")');
+    expect(read).not.toContain("Better Conversations");
+    expect(tryPage).not.toContain("MandarinOS is the first practical");
+    expect(read).not.toContain("summary: \"");
+    expect(tryPage).not.toContain("summary: \"");
   });
 });

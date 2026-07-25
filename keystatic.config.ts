@@ -117,7 +117,7 @@ export default config({
         canonicalUrl: fields.text({
           label: "Canonical URL",
           description:
-            "Required for published works. Use an absolute https URL, or a site path such as /. Leave blank for developing works. Do not invent URLs.",
+            "Required for published works. Use an absolute https URL, or a site path such as /charter. Leave blank for developing works. Do not invent URLs.",
           validation: { length: { max: 500 } },
         }),
         distributionLinks: fields.array(

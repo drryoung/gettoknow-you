@@ -18,9 +18,12 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: "GetToKnow.You — Community Charter",
+  title: {
+    default: "GetToKnow.You",
+    template: "%s — GetToKnow.You",
+  },
   description:
-    "A concise statement of the purpose, vision, principles, ecosystem, and decision test of the GetToKnow.You community.",
+    "A public commons for meaningful conversation and relationship—ideas to read, things to try, and an emerging community.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
