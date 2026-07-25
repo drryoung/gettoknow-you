@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
+import { InfluencesBody } from "../components/InfluencesBody";
+import { getAboutInfluences } from "../../content/loadAboutInfluences";
 
 export const metadata: Metadata = {
   title: "About",
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
     "Raymond Young, GetToKnow.You, ConversationOS, and MandarinOS—how the ecosystem fits together.",
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const influences = await getAboutInfluences();
+
   return (
     <main>
       <SiteHeader current="/about" />
@@ -58,6 +62,13 @@ export default function AboutPage() {
           The project is not a finished community platform. It is a careful beginning: a charter, a
           commons of curated works, and practical experiments such as MandarinOS.
         </p>
+      </section>
+
+      <section
+        className="screen shell about-influences"
+        aria-labelledby="influences"
+      >
+        <InfluencesBody body={influences.body} />
       </section>
 
       <section className="screen shell about-links" aria-label="Related links">

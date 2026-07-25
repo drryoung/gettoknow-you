@@ -506,8 +506,37 @@ h3 {
 .meet-intent,
 .about-ecosystem,
 .about-bio,
+.about-influences,
 .about-links {
   max-width: var(--measure-editorial);
+}
+
+.about-influences__body {
+  max-width: min(100%, var(--measure-reading));
+}
+
+.about-influences__body > h2 {
+  margin: 0 0 1.1rem;
+}
+
+.about-influences__body > p {
+  margin: 0 0 1.15rem;
+  font-size: clamp(1.05rem, 1.25vw, 1.18rem);
+  color: color-mix(in srgb, var(--ink) 88%, transparent);
+  line-height: 1.65;
+}
+
+.about-influences__body > p:last-child {
+  margin-bottom: 0;
+}
+
+.about-influences__body > p.about-influences__disclaimer {
+  margin-top: 1.75rem;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  max-width: 46ch;
 }
 
 .pathway-list,
