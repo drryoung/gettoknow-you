@@ -14,10 +14,20 @@ function stubWork(slug: string): Work {
     summary: "Summary",
     type: "essay",
     date: "2026-07-25",
+    publishedDate: null,
     publicationState: "developing",
     canonicalUrl: null,
+    externalUrl: null,
+    internalPath: null,
     distributionLinks: [],
     status: "listed",
+    topics: [],
+    series: null,
+    watchTime: null,
+    readTime: null,
+    thumbnail: null,
+    featured: false,
+    startHereOrder: null,
   };
 }
 

@@ -3,6 +3,7 @@
  * Storage is local-only; production routes are disabled separately.
  */
 import { config, fields, singleton, collection } from "@keystatic/core";
+import { COLLECTIONS } from "./content/collections";
 
 export default config({
   storage: { kind: "local" },
@@ -72,7 +73,7 @@ export default config({
       slugField: "title",
       format: { data: "yaml" },
       entryLayout: "form",
-      columns: ["type", "publicationState", "date", "status"],
+      columns: ["type", "publicationState", "status", "featured"],
       schema: {
         title: fields.slug({
           name: {
@@ -82,7 +83,7 @@ export default config({
         }),
         summary: fields.text({
           label: "Summary",
-          description: "One or two sentences for the Explore list.",
+          description: "One or two sentences for library listings.",
           multiline: true,
           validation: { isRequired: true, length: { min: 1, max: 400 } },
         }),
@@ -94,6 +95,9 @@ export default config({
             { label: "Practice", value: "practice" },
             { label: "Project", value: "project" },
             { label: "Video", value: "video" },
+            { label: "Article", value: "article" },
+            { label: "Guide", value: "guide" },
+            { label: "Resource", value: "resource" },
             { label: "Other", value: "other" },
           ],
           defaultValue: "essay",
@@ -103,6 +107,11 @@ export default config({
           description:
             "Date this record was added to the commons (not necessarily a publication date).",
           validation: { isRequired: true },
+        }),
+        publishedDate: fields.date({
+          label: "Published date",
+          description:
+            "The actual publication date, if known. Leave blank if unknown — do not guess.",
         }),
         publicationState: fields.select({
           label: "Publication state",
@@ -133,20 +142,59 @@ export default config({
             }),
           }),
           {
-            label: "Distribution links",
+            label: "Distribution links / platforms",
             description:
-              "Optional social or platform adaptations of this canonical work. Not separate entries.",
+              "Optional social or platform adaptations of this canonical work (for example Xiaohongshu or YouTube). Not separate entries.",
             itemLabel: (props) => props.fields.label.value || "Distribution link",
           }
         ),
+        topics: fields.multiselect({
+          label: "Topics (collections)",
+          description:
+            "Which thematic collections should surface this item. An item may belong to several collections without being duplicated.",
+          options: COLLECTIONS.map((c) => ({ label: c.name, value: c.slug })),
+          defaultValue: [],
+        }),
+        series: fields.text({
+          label: "Series",
+          description: 'Optional. For example "Conversations I Wish I\u2019d Had". Leave blank if not part of a series.',
+          validation: { length: { max: 120 } },
+        }),
+        watchTime: fields.text({
+          label: "Watch time",
+          description: 'Optional. For example "4 min". Leave blank if unknown.',
+          validation: { length: { max: 20 } },
+        }),
+        readTime: fields.text({
+          label: "Read time",
+          description: 'Optional. For example "3 min read". Leave blank if unknown.',
+          validation: { length: { max: 20 } },
+        }),
+        thumbnail: fields.text({
+          label: "Thumbnail",
+          description: "Optional image path or URL. Leave blank if unknown.",
+          validation: { length: { max: 500 } },
+        }),
+        featured: fields.checkbox({
+          label: "Featured",
+          description: "Eligible for prominent display (for example homepage or Start Here highlights).",
+          defaultValue: false,
+        }),
+        startHereOrder: fields.integer({
+          label: "Start Here order",
+          description:
+            "Optional. Set a number to include this item in the curated Start Here sequence, lowest first. Leave blank to exclude it.",
+        }),
         status: fields.select({
           label: "Status",
           options: [
+            { label: "Draft", value: "draft" },
             { label: "Listed", value: "listed" },
             { label: "Archived", value: "archived" },
           ],
           defaultValue: "listed",
-          description: "Listed works appear on /explore. Archived works stay in the repo but are hidden.",
+          description:
+            "Draft items never appear publicly. Listed works appear on /explore and its collections. Archived works stay in the archive but are hidden from Start Here and collections.",
         }),
       },
     }),

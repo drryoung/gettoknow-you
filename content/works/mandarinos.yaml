@@ -9,4 +9,9 @@ date: 2026-07-25
 publicationState: published
 canonicalUrl: https://www.mandarinos.app/
 distributionLinks: []
+topics:
+  - language-learning
+  - conversation
+featured: true
+startHereOrder: 3
 status: listed

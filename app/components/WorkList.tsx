@@ -6,6 +6,9 @@ const TYPE_LABELS: Record<WorkType, string> = {
   practice: "Practice",
   project: "Project",
   video: "Video",
+  article: "Article",
+  guide: "Guide",
+  resource: "Resource",
   other: "Other",
 };
 
@@ -50,6 +53,12 @@ export function WorkItem({
         <span aria-hidden="true"> · </span>
         <span>Added </span>
         <time dateTime={work.date}>{formatDate(work.date)}</time>
+        {(work.watchTime || work.readTime) && (
+          <>
+            <span aria-hidden="true"> · </span>
+            <span>{work.watchTime || work.readTime}</span>
+          </>
+        )}
       </p>
       <h2 className="explore-list__title">{title}</h2>
       <p className="explore-list__summary">{work.summary}</p>

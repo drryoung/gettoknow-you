@@ -40,16 +40,34 @@ Do not invent external URLs. Published works without a usable URL are excluded b
 
 ### Lifecycle
 
-* `listed` — available through `getListedWorks()` for Explore and pathway pages
-* `archived` — remains in the repository for history, but is excluded from public lists
+* `draft` — never shown publicly, anywhere (not Start Here, not a collection, not the archive)
+* `listed` — available through `getListedWorks()` for Explore, Start Here, collections, and pathway pages
+* `archived` — remains visible in `/explore/archive` for history, but excluded from Start Here and collections
 
-The `date` field is the date the record was **added** to the commons, not necessarily a publication date.
+The `date` field is the date the record was **added** to the commons, not necessarily a publication date. `publishedDate` is the true publication date when known; leave it blank rather than guessing.
 
 Work titles, summaries, and URLs must come through the approved loader (`content/loadWorks.ts`). Do not hard-code work copy in page components.
+
+### Content library metadata
+
+Optional fields that make an item findable across the three visitor layers (Start Here, Collections, Archive) without duplicating the record:
+
+* `topics` — collection slugs from `content/collections.ts`. An item may carry several; it still exists once in `content/works/*`.
+* `series` — optional grouping of related items (used for the related-content foundation in `selectRelatedWorks`).
+* `watchTime` / `readTime` — optional plain-text duration.
+* `featured` — eligibility for prominent display.
+* `startHereOrder` — position in the curated Start Here sequence. Leave blank to exclude an item from Start Here.
+* `thumbnail` — optional image path/URL.
+
+All of these are optional. Missing values must never break rendering — the loader falls back to `null`/`[]`/`false` defaults.
 
 ### Pathway placement
 
 Read / Try / Meet select approved works through a presentation-level slug map (`content/sitePathways.ts`). This keeps editing simple while the taxonomy is still young. Do not invent multiple theme systems in content files for this increment.
+
+### Collection taxonomy
+
+`content/collections.ts` is the single source of truth for collection slug, display name, and description. `keystatic.config.ts` imports it to build the `topics` field options, so the taxonomy is defined once. Extend the taxonomy by adding an entry there — do not hard-code a second list of collection names anywhere else.
 
 ## Page framing copy
 

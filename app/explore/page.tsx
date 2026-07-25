@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { getListedWorks } from "../../content/loadWorks";
+import {
+  getListedWorks,
+  getStartHereWorks,
+  type Work,
+} from "../../content/loadWorks";
+import { COLLECTIONS } from "../../content/collections";
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
 import { WorkList } from "../components/WorkList";
@@ -33,8 +38,12 @@ const GATEWAYS = [
   },
 ] as const;
 
+function countByCollection(works: readonly Work[], slug: string): number {
+  return works.filter((work) => work.topics.includes(slug)).length;
+}
+
 export default async function ExplorePage() {
-  const works = await getListedWorks();
+  const [startHere, listedWorks] = await Promise.all([getStartHereWorks(), getListedWorks()]);
 
   return (
     <main>
@@ -62,12 +71,62 @@ export default async function ExplorePage() {
         </ul>
       </section>
 
-      <section className="screen shell explore" aria-label="Curated works">
-        <h2 className="explore-section-title">All curated works</h2>
+      <section className="screen shell explore-start-here" aria-labelledby="start-here-title">
+        <p className="eyebrow">Start Here</p>
+        <h2 id="start-here-title" className="explore-section-title">
+          A place to begin
+        </h2>
+        <p className="section-lede">
+          If you are new to GetToKnow.You, this small sequence is the fastest way to understand
+          what we are building and why.
+        </p>
         <WorkList
-          works={works}
-          emptyMessage="Curated works will appear here as they are approved for the public commons."
+          works={startHere}
+          emptyMessage="The curated Start Here sequence is still being assembled."
         />
+      </section>
+
+      <section className="screen shell explore-collections" aria-labelledby="collections-title">
+        <p className="eyebrow">Collections</p>
+        <h2 id="collections-title" className="explore-section-title">
+          Browse by theme
+        </h2>
+        <p className="section-lede">
+          Once you have a feel for GetToKnow.You, these collections let you follow a single thread
+          further—conversation, relationships, culture, and more.
+        </p>
+        <ul className="collection-grid">
+          {COLLECTIONS.map((collection) => {
+            const count = countByCollection(listedWorks, collection.slug);
+            return (
+              <li key={collection.slug} className="collection-card">
+                <h3 className="collection-card__title">
+                  <a href={`/explore/${collection.slug}`}>{collection.name}</a>
+                </h3>
+                <p className="collection-card__text">{collection.description}</p>
+                <p className="collection-card__count">
+                  {count > 0
+                    ? `${count} item${count === 1 ? "" : "s"}`
+                    : "Coming soon"}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section className="screen shell explore-archive" aria-labelledby="archive-title">
+        <p className="eyebrow">Archive</p>
+        <h2 id="archive-title" className="explore-section-title">
+          The complete library
+        </h2>
+        <p className="section-lede">
+          Every published work, listed in one place, newest first. Useful once you want to see
+          everything rather than a curated path.
+        </p>
+        <a className="action-link" href="/explore/archive">
+          View the archive
+        </a>
       </section>
 
       <SiteFooter />

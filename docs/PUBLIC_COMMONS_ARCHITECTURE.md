@@ -24,13 +24,20 @@ In scope now:
 * Visitor homepage at `/`
 * Pathways: `/explore`, `/read`, `/try`, `/meet`, `/about`
 * Community Charter at `/charter` from the sole Markdoc source
-* Keystatic `works` collection under `content/works/*`
-* `getListedWorks()` and presentation-level pathway slug mapping
-* Published and developing work states
+* Keystatic `works` collection under `content/works/*`, extended with a
+  content-library metadata model (topics, series, timing, featured, Start
+  Here ordering — see §6a)
+* A three-layer content library surfaced through `/explore`: **Start Here**,
+  **Collections** (`/explore/[collection]`), and **Archive**
+  (`/explore/archive`)
+* `getListedWorks()`, `getStartHereWorks()`, `getFeaturedWorks()`,
+  `getCollectionWorks()`, `getArchiveWorks()`, `getRelatedWorks()`, and
+  presentation-level pathway slug mapping
+* Published, developing, and draft work states
 * Governance, design, and architecture documentation
-* Tests protecting charter authority and works loading
+* Tests protecting charter authority, works loading, and library layering
 
-Out of scope now (deferred): work detail routes, native long-form work bodies, accounts, auth, comments, forums, profiles, Circle, WeChat, analytics, multilingual mirrors, related-item graphs, automated social ingestion, newsletter, forms, and new packages.
+Out of scope now (deferred): per-item work detail routes, native long-form work bodies, accounts, auth, comments, forums, profiles, Circle, WeChat, analytics, multilingual mirrors, search/filtering UI, automated social ingestion, newsletter, forms, and new packages.
 
 ## 4. Content domains
 
@@ -68,6 +75,43 @@ Each listed work carries at least: title, summary, type, added date, publication
 
 Read / Try / Meet surfaces select works through a small presentation mapping of approved slugs (`content/sitePathways.ts`), not by permanently encoding an immature taxonomy onto every work record. Work titles and summaries always come from the loader.
 
+## 6a. Content library model (Start Here / Collections / Archive)
+
+The content library is **the same `works` collection**, not a second content
+system. Every item exists once in `content/works/*`; the three visitor layers
+below are derived views over that one source of truth.
+
+| Field | Purpose |
+|---|---|
+| `topics` | Collection slugs this item belongs to. An item may carry several topics and so appear in several collections without duplication. |
+| `series` | Optional grouping of related items (for example a video series). |
+| `publishedDate` | The true publication date, when known. Falls back to the added `date` when absent. |
+| `watchTime` / `readTime` | Optional, plain-text duration shown in listings. |
+| `featured` | Eligibility for prominent display. |
+| `startHereOrder` | Position in the curated Start Here sequence (ascending). Absent = not included. |
+| `thumbnail` | Optional image path/URL. |
+| `status: draft` | Never shown publicly, anywhere (a third value alongside `listed` and `archived`). |
+
+Collection taxonomy (`content/collections.ts`) is the single source for
+collection slug, name, and description. It currently defines: Stories,
+Conversation, Relationships, Emotional Intelligence, Workplace, China, and
+Language Learning. Extend it by adding one entry — no schema or route
+rewrite is required.
+
+* **Start Here** (`getStartHereWorks`) — listed items with a `startHereOrder`, ascending.
+* **Collections** (`getCollectionWorks(slug)`, routed at `/explore/[collection]`) — listed items whose `topics` include the collection slug. Unknown slugs 404 via the standard Next.js not-found behaviour.
+* **Archive** (`getArchiveWorks`, routed at `/explore/archive`) — every non-draft item (listed or archived), reverse-chronological by `publishedDate` (falling back to `date`), deterministic via a slug tie-break.
+* **Related content** (`getRelatedWorks`) — a small, non-ranked set of other listed items sharing the same `series`, then the same `topics`. A pure data-layer foundation; no per-item route currently exists to render a "Continue exploring" block (see §11).
+
+Archived items remain visible in the Archive but never in Start Here or
+collection views, per the metadata rules above.
+
+To bring a draft item (for example an unreleased video) into public view once
+it is ready: add its verified `canonicalUrl` and set `publicationState` to
+`published` (or leave it `developing` if it is still an honest signpost),
+then change `status` from `draft` to `listed`. No other field needs to
+change; the item's `topics`/`series` already determine where it will appear.
+
 ## 7. Distribution adaptations
 
 Platform versions that promote or adapt a canonical work (Xiaohongshu, Instagram, Facebook, Substack excerpts, and similar) are normally **distribution links** on the work record—not separate commons entries and not separate routes.
@@ -83,7 +127,9 @@ Announcements, reminders, comments, minor variants, and temporary updates normal
 | Route | Responsibility |
 |---|---|
 | `/` | Welcoming homepage; pathways; featured works preview; founder preview; Charter note |
-| `/explore` | Gateway overview plus full listed works editorial list |
+| `/explore` | Gateway overview: Start Here sequence, Collections grid, and a link into the Archive |
+| `/explore/[collection]` | One reusable template rendering any collection from `content/collections.ts`; unknown slugs 404 |
+| `/explore/archive` | Complete reverse-chronological index of non-draft works |
 | `/read` | Editorial list of reading-oriented works |
 | `/try` | Practical projects and practices (MandarinOS clearest active action) |
 | `/meet` | Emerging community framing and Charter pathway |
@@ -92,7 +138,7 @@ Announcements, reminders, comments, minor variants, and temporary updates normal
 | `/keystatic` | Local content editor only (development); production 404 |
 | `/api/keystatic` | Local Keystatic API only (development); production 404 |
 
-No `/explore/[slug]` in this increment. Published works are reached through `canonicalUrl`. Developing works have no destination link.
+No `/explore/[slug]` per-item detail routes in this increment. Published works are reached through `canonicalUrl`. Developing works have no destination link. `/explore/[collection]` and `/explore/archive` are library index/filter views, not individual work pages.
 
 ## 10. Founder editing workflow
 
@@ -101,18 +147,19 @@ No `/explore/[slug]` in this increment. Published works are reached through `can
 3. Add or edit a work in **Works**.
 4. Set publication state to `published` (with a verified URL) or `developing` (URL optional).
 5. Attach optional distribution links (for example Xiaohongshu or Instagram).
-6. Set status to `listed` or `archived`.
-7. If the work should appear on Read / Try / Meet, update the approved slug mapping in `content/sitePathways.ts`.
-8. Preview `/explore` and the relevant pathway page.
-9. Review the Git diff under `content/works/`.
-10. Run `npm run typecheck`, `npm test`, and `npm run build` as needed.
-11. Commit and publish through the existing Git workflow.
+6. Set status to `draft`, `listed`, or `archived`. Drafts never appear publicly.
+7. If the work belongs in one or more thematic collections, set `topics`. Optionally set `series`, `watchTime`/`readTime`, `featured`, and `startHereOrder`.
+8. If the work should appear on Read / Try / Meet, update the approved slug mapping in `content/sitePathways.ts`.
+9. Preview `/explore`, the relevant collection, `/explore/archive`, and the relevant pathway page.
+10. Review the Git diff under `content/works/`.
+11. Run `npm run typecheck`, `npm test`, and `npm run build` as needed.
+12. Commit and publish through the existing Git workflow.
 
 Production Keystatic editing is not available.
 
 ## 11. Deferred capabilities
 
-Deferred until explicitly approved: public email response (`mailto:`), work detail pages, native Markdoc bodies for works, featured ordering beyond the slug map, related works, multilingual mirrors, community interaction surfaces, analytics, authentication, newsletter, and automated ingestion from social platforms.
+Deferred until explicitly approved: public email response (`mailto:`), per-item work detail pages (and therefore an on-page "Continue exploring" related-content block), native Markdoc bodies for works, search/filtering UI on the Archive, multilingual mirrors, community interaction surfaces, analytics, authentication, newsletter, and automated ingestion from social platforms.
 
 ## 12. Change-control rule
 
