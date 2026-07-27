@@ -4,7 +4,6 @@ import { SiteFooter } from "./components/SiteFooter";
 import { Thread } from "./components/Thread";
 import { getHomepageFeatured } from "../content/sitePathways";
 import type { Work } from "../content/loadWorks";
-import { isExternalHref } from "./components/WorkList";
 
 export const metadata: Metadata = {
   title: {
@@ -43,22 +42,11 @@ const PATHWAYS = [
 ] as const;
 
 function FeaturedWork({ work }: { work: Work }) {
-  const isPublished = work.publicationState === "published" && work.canonicalUrl;
+  const isPublished = work.publicationState === "published";
   return (
     <li className="featured-list__item">
       <h3 className="featured-list__title">
-        {isPublished ? (
-          <a
-            href={work.canonicalUrl!}
-            {...(isExternalHref(work.canonicalUrl!)
-              ? { rel: "noopener noreferrer" }
-              : {})}
-          >
-            {work.title}
-          </a>
-        ) : (
-          work.title
-        )}
+        {isPublished ? <a href={work.href}>{work.title}</a> : work.title}
       </h3>
       <p className="featured-list__summary">{work.summary}</p>
       {!isPublished ? (

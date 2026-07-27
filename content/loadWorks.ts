@@ -2,20 +2,24 @@
  * Server-side content-library loader (GetToKnow.You).
  *
  * Reads the Keystatic `works` collection — the single source of truth for
- * every library item (video, essay, story, article, guide, resource...).
- * Separate from the Community Charter domain.
+ * every library item. Separate from the Community Charter domain.
  *
- * Three visitor layers are derived from this one collection, never
- * duplicated into separate content sources:
- *   - Start Here  → listed + published items with a positive `startHereOrder`
- *                   and a usable destination, ascending (public-safe)
+ * Hybrid publishing model (one record, many surfaces):
+ *   - Hosted   → full material in the Markdoc body on GetToKnow.You
+ *   - Summary  → meaningful standalone summary/adaptation; external links optional
+ *   - Reference → annotated external source; not Start Here by default
+ *
+ * Visitor layers derived from this one collection (never duplicated):
+ *   - Start Here  → listed + published + hosted/summary with internal presentation
  *   - Collections → items whose `topics` include a given collection slug
  *   - Archive     → every non-draft item, reverse-chronological
+ *   - Work pages  → /works/[slug] for listed + published, content-valid works
  *
- * Published works require a canonical URL. Developing works may omit it.
- * Draft items never appear in any public listing.
+ * Draft items never appear in any public listing. Developing items may appear
+ * as honest signposts in Explore/archive but never receive a public work page.
  */
 import { createReader } from "@keystatic/core/reader";
+import Markdoc, { type RenderableTreeNode } from "@markdoc/markdoc";
 import path from "path";
 import keystaticConfig from "../keystatic.config";
 import { isCollectionSlug } from "./collections";
@@ -53,6 +57,9 @@ export type WorkStatus = "draft" | "listed" | "archived";
 
 export type PublicationState = "published" | "developing";
 
+export const CONTENT_MODES = ["hosted", "summary", "reference"] as const;
+export type ContentMode = (typeof CONTENT_MODES)[number];
+
 export type DistributionLink = {
   platform: DistributionPlatform;
   /** Optional extra note (for example "Reel" or "Post 2"). Null if not set. */
@@ -65,17 +72,38 @@ export type Work = {
   title: string;
   summary: string;
   type: WorkType;
+  contentMode: ContentMode;
+  keyTakeaway: string | null;
+  annotation: string | null;
+  sourceTitle: string | null;
+  sourceAuthor: string | null;
+  sourcePublication: string | null;
+  /** True when the Markdoc body has real content. */
+  hasBody: boolean;
+  /** Stable internal catalogue URL: /works/[slug]. */
+  workPath: string;
+  /**
+   * Primary card/list href: usually workPath; may be a first-party page such as
+   * /charter when that path is the full experience for this record.
+   */
+  href: string;
   /** Date this record was added to the commons (not necessarily published). */
   date: string;
   /** Actual publication date, when known. Null if unknown. */
   publishedDate: string | null;
   publicationState: PublicationState;
-  /** Present for published works; null for developing works. */
+  /**
+   * Resolved authoritative URL for provenance display.
+   * When canonicalPlatform is gettoknow-you, this is workPath.
+   * Otherwise the editorial canonicalUrl when usable.
+   */
   canonicalUrl: string | null;
   /** canonicalUrl when it is an absolute http(s) URL; otherwise null. */
   externalUrl: string | null;
   /** canonicalUrl when it is an internal site path; otherwise null. */
   internalPath: string | null;
+  /** Optional explicit HTML rel=canonical override for duplicated external works. */
+  seoCanonicalUrl: string | null;
   /** Optional platform adaptations (Xiaohongshu, YouTube, Instagram, ...). */
   distributionLinks: DistributionLink[];
   status: WorkStatus;
@@ -91,8 +119,13 @@ export type Work = {
   startHereOrder: number | null;
   /** Where this item was first published, when known. Editorial record only. */
   origin: Origin | null;
-  /** Which platform hosts the authoritative canonicalUrl, when known. */
+  /** Which platform hosts the authoritative version, when known. */
   canonicalPlatform: CanonicalPlatform | null;
+};
+
+export type WorkDetail = Work & {
+  /** Transformed Markdoc body when present; null when empty. */
+  body: RenderableTreeNode | null;
 };
 
 /** Raw entry shape used by normalizeWork (Keystatic reader or fixtures). */
@@ -101,10 +134,18 @@ export type WorkEntryInput = {
   title?: string | null;
   summary?: string | null;
   type?: string | null;
+  contentMode?: string | null;
+  keyTakeaway?: string | null;
+  annotation?: string | null;
+  sourceTitle?: string | null;
+  sourceAuthor?: string | null;
+  sourcePublication?: string | null;
+  hasBody?: boolean | null;
   date?: string | null;
   publishedDate?: string | null;
   publicationState?: string | null;
   canonicalUrl?: string | null;
+  seoCanonicalUrl?: string | null;
   distributionLinks?: ReadonlyArray<{
     platform?: string | null;
     label?: string | null;
@@ -122,6 +163,17 @@ export type WorkEntryInput = {
   canonicalPlatform?: string | null;
 };
 
+/** First-party site paths that may be the primary card destination for a work. */
+const FIRST_PARTY_PAGE_PATHS = new Set([
+  "/charter",
+  "/try",
+  "/meet",
+  "/about",
+  "/read",
+  "/explore",
+  "/start-here",
+]);
+
 function isWorkType(value: string): value is WorkType {
   return (WORK_TYPES as readonly string[]).includes(value);
 }
@@ -134,6 +186,10 @@ function isPublicationState(value: string): value is PublicationState {
   return value === "published" || value === "developing";
 }
 
+function isContentMode(value: string): value is ContentMode {
+  return (CONTENT_MODES as readonly string[]).includes(value);
+}
+
 function isExternalHref(href: string): boolean {
   return /^https?:\/\//i.test(href);
 }
@@ -141,10 +197,9 @@ function isExternalHref(href: string): boolean {
 const BLOCKED_PUBLIC_HOSTS = new Set(["localhost", "127.0.0.1", "example.com", "www.example.com"]);
 
 /**
- * Destination quality for public Start Here (and related link safety).
- * A non-empty string is not enough: reject placeholders, local/dev hosts,
- * malformed URLs, and non-http(s) schemes. Internal paths must be absolute
- * site paths and must not point at Keystatic or API surfaces.
+ * Destination quality for public links.
+ * Reject placeholders, local/dev hosts, malformed URLs, and non-http(s) schemes.
+ * Internal paths must be absolute site paths and must not point at Keystatic or API surfaces.
  */
 export function isUsablePublicHref(href: string): boolean {
   const trimmed = href.trim();
@@ -177,16 +232,40 @@ export function isUsablePublicHref(href: string): boolean {
 
   if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return false;
   if (trimmed.startsWith("/keystatic") || trimmed.startsWith("/api/")) return false;
-  // Reject obviously broken path shapes while allowing ordinary site routes.
   if (/\s/.test(trimmed)) return false;
   return true;
+}
+
+export function workPathForSlug(slug: string): string {
+  return `/works/${slug}`;
+}
+
+/**
+ * Infer contentMode for legacy records that predate the field.
+ * Conservative: external URL → reference-leaning summary; otherwise summary.
+ * Explicit hosted is never inferred — that requires a body and editorial choice.
+ */
+export function inferContentMode(input: {
+  contentMode?: string | null;
+  canonicalUrl?: string | null;
+  hasBody?: boolean | null;
+}): ContentMode {
+  const raw = input.contentMode?.trim();
+  if (raw && isContentMode(raw)) return raw;
+
+  const url = input.canonicalUrl?.trim() || "";
+  if (url && isExternalHref(url) && !input.hasBody) {
+    // External catalogue entries without a body default to reference when
+    // migrating incomplete records — public eligibility still requires annotation.
+    return "reference";
+  }
+  return "summary";
 }
 
 /**
  * Normalise distribution links. A link is kept only when it has a usable
  * URL; a missing or unrecognised platform falls back to "other" rather than
- * discarding an otherwise-valid link. The optional label is a free-text note
- * on top of the platform, not a replacement for it.
+ * discarding an otherwise-valid link.
  */
 function normalizeDistributionLinks(
   links:
@@ -198,7 +277,7 @@ function normalizeDistributionLinks(
   const out: DistributionLink[] = [];
   for (const link of links) {
     const url = link.url?.trim();
-    if (!url) continue;
+    if (!url || !isUsablePublicHref(url)) continue;
     const platformRaw = link.platform?.trim() ?? "";
     const platform: DistributionPlatform = isDistributionPlatform(platformRaw)
       ? platformRaw
@@ -231,27 +310,127 @@ function normalizeTopics(topics: ReadonlyArray<string | null> | null | undefined
 }
 
 function normalizeStartHereOrder(value: number | null | undefined): number | null {
-  // Only positive integers are meaningful for public Start Here ordering.
-  // Zero, negatives, and non-integers normalise to null (excluded).
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   if (!Number.isInteger(value) || value < 1) return null;
   return value;
 }
 
-/** True when a work has a destination suitable for a public Start Here card. */
-export function hasUsablePublicDestination(
-  work: Pick<Work, "canonicalUrl" | "distributionLinks">
+function meaningfulText(value: string | null | undefined, min = 1): string | null {
+  const trimmed = value?.trim() || "";
+  return trimmed.length >= min ? trimmed : null;
+}
+
+/** Whether a Markdoc AST node tree contains visible text or media. */
+export function markdocNodeHasContent(node: unknown): boolean {
+  if (node == null) return false;
+  if (typeof node === "string") return node.trim().length > 0;
+  if (typeof node !== "object") return false;
+  const record = node as {
+    type?: string;
+    attributes?: Record<string, unknown>;
+    children?: unknown[];
+  };
+  if (record.type === "image") return true;
+  if (record.type === "text" || typeof record.attributes?.content === "string") {
+    const content = record.attributes?.content;
+    if (typeof content === "string" && content.trim().length > 0) return true;
+  }
+  if (Array.isArray(record.children) && record.children.length > 0) {
+    return record.children.some((child) => markdocNodeHasContent(child));
+  }
+  return false;
+}
+
+/**
+ * True when the work has enough internal content for a useful public page /
+ * Start Here card without forcing a social login.
+ */
+export function hasAccessibleInternalPresentation(
+  work: Pick<Work, "contentMode" | "hasBody" | "summary" | "keyTakeaway" | "annotation">
 ): boolean {
-  if (work.canonicalUrl && isUsablePublicHref(work.canonicalUrl)) return true;
-  return work.distributionLinks.some((link) => isUsablePublicHref(link.url));
+  if (work.contentMode === "reference") return false;
+  if (work.contentMode === "hosted") return work.hasBody;
+  // summary
+  if (!work.summary.trim()) return false;
+  return Boolean(work.keyTakeaway || work.annotation || work.hasBody || work.summary.length >= 40);
+}
+
+/**
+ * Central published-content validation by content mode.
+ * Returns false when a published work is incomplete for public use.
+ */
+export function isPublishedContentValid(
+  work: Pick<
+    Work,
+    | "contentMode"
+    | "hasBody"
+    | "summary"
+    | "keyTakeaway"
+    | "annotation"
+    | "canonicalUrl"
+    | "externalUrl"
+    | "canonicalPlatform"
+  >
+): boolean {
+  switch (work.contentMode) {
+    case "hosted":
+      return work.hasBody;
+    case "summary":
+      return Boolean(meaningfulText(work.summary, 20));
+    case "reference": {
+      const sourceOk = Boolean(work.externalUrl && isUsablePublicHref(work.externalUrl));
+      const noteOk = Boolean(meaningfulText(work.annotation, 20) || meaningfulText(work.summary, 20));
+      return sourceOk && noteOk;
+    }
+    default:
+      return false;
+  }
+}
+
+/** Primary list/card destination for a public work. */
+export function resolveWorkHref(
+  work: Pick<Work, "workPath" | "canonicalUrl" | "internalPath">
+): string {
+  const candidate = work.internalPath || work.canonicalUrl;
+  if (candidate && FIRST_PARTY_PAGE_PATHS.has(candidate.split("?")[0] ?? "")) {
+    return candidate.split("?")[0] ?? work.workPath;
+  }
+  return work.workPath;
+}
+
+/**
+ * Resolve the authoritative URL shown in provenance.
+ * GetToKnow.You canonical works use the derived internal work path.
+ */
+export function resolveCanonicalUrl(input: {
+  slug: string;
+  publicationState: PublicationState;
+  canonicalPlatform: CanonicalPlatform | null;
+  canonicalUrl: string | null;
+}): string | null {
+  if (input.publicationState === "developing") return null;
+
+  const raw = input.canonicalUrl?.trim() || null;
+  const rawPath = raw?.split("?")[0] ?? null;
+
+  if (input.canonicalPlatform === "gettoknow-you") {
+    // Prefer an explicit first-party page (for example /charter) when it is
+    // the authoritative GetToKnow.You surface; otherwise derive /works/[slug].
+    if (rawPath && FIRST_PARTY_PAGE_PATHS.has(rawPath) && isUsablePublicHref(rawPath)) {
+      return rawPath;
+    }
+    return workPathForSlug(input.slug);
+  }
+
+  if (!raw) return null;
+  if (!isUsablePublicHref(raw)) return null;
+  return raw;
 }
 
 /**
  * Normalise one collection entry.
  * Returns null when required fields are missing, or when a published work
- * has no canonical URL (excluded safely rather than shown as broken).
- * Missing optional metadata (topics, series, durations, ordering, ...)
- * never causes rejection — it simply falls back to an empty/null default.
+ * fails content-mode validation (excluded safely rather than shown broken).
  */
 export function normalizeWork(input: WorkEntryInput): Work | null {
   const title = input.title?.trim();
@@ -261,34 +440,57 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
   const publishedDate = input.publishedDate?.trim() || null;
   const publicationState = input.publicationState?.trim() ?? "";
   const status = input.status?.trim() ?? "";
-  const canonicalUrl = input.canonicalUrl?.trim() || null;
+  const hasBody = input.hasBody === true;
+  const contentMode = inferContentMode({
+    contentMode: input.contentMode,
+    canonicalUrl: input.canonicalUrl,
+    hasBody,
+  });
 
   if (!title || !summary || !date) return null;
   if (!isWorkType(type) || !isWorkStatus(status) || !isPublicationState(publicationState)) {
     return null;
   }
 
-  if (publicationState === "published" && !canonicalUrl) {
-    return null;
-  }
+  const workPath = workPathForSlug(input.slug);
+  const canonicalPlatform = normalizeCanonicalPlatform(input.canonicalPlatform);
+  const editorialCanonicalUrl = input.canonicalUrl?.trim() || null;
+  const canonicalUrl = resolveCanonicalUrl({
+    slug: input.slug,
+    publicationState,
+    canonicalPlatform,
+    canonicalUrl: editorialCanonicalUrl,
+  });
 
-  const resolvedCanonicalUrl = publicationState === "developing" ? null : canonicalUrl;
-  const externalUrl =
-    resolvedCanonicalUrl && isExternalHref(resolvedCanonicalUrl) ? resolvedCanonicalUrl : null;
+  const externalUrl = canonicalUrl && isExternalHref(canonicalUrl) ? canonicalUrl : null;
   const internalPath =
-    resolvedCanonicalUrl && !isExternalHref(resolvedCanonicalUrl) ? resolvedCanonicalUrl : null;
+    canonicalUrl && !isExternalHref(canonicalUrl) ? canonicalUrl : null;
 
-  return {
+  const seoRaw = input.seoCanonicalUrl?.trim() || null;
+  const seoCanonicalUrl =
+    seoRaw && isExternalHref(seoRaw) && isUsablePublicHref(seoRaw) ? seoRaw : null;
+
+  const work: Work = {
     slug: input.slug,
     title,
     summary,
     type,
+    contentMode,
+    keyTakeaway: meaningfulText(input.keyTakeaway),
+    annotation: meaningfulText(input.annotation),
+    sourceTitle: meaningfulText(input.sourceTitle),
+    sourceAuthor: meaningfulText(input.sourceAuthor),
+    sourcePublication: meaningfulText(input.sourcePublication),
+    hasBody,
+    workPath,
+    href: workPath,
     date,
     publishedDate,
     publicationState,
-    canonicalUrl: resolvedCanonicalUrl,
+    canonicalUrl,
     externalUrl,
     internalPath,
+    seoCanonicalUrl,
     distributionLinks: normalizeDistributionLinks(input.distributionLinks),
     status,
     topics: normalizeTopics(input.topics),
@@ -299,14 +501,19 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
     featured: input.featured === true,
     startHereOrder: normalizeStartHereOrder(input.startHereOrder),
     origin: normalizeOrigin(input.origin),
-    canonicalPlatform: normalizeCanonicalPlatform(input.canonicalPlatform),
+    canonicalPlatform,
   };
+
+  work.href = resolveWorkHref(work);
+
+  if (publicationState === "published" && !isPublishedContentValid(work)) {
+    return null;
+  }
+
+  return work;
 }
 
-/**
- * Pure filter/sort used by the loader and unit tests.
- * Returns only listed works, newest added-date first (slug as stable tie-break).
- */
+/** Pure filter/sort: listed works, newest added-date first. */
 export function selectListedWorks(works: readonly Work[]): Work[] {
   return works
     .filter((work) => work.status === "listed")
@@ -321,7 +528,7 @@ export function selectListedWorks(works: readonly Work[]): Work[] {
 /**
  * Archive layer: every non-draft item (listed or archived), sorted
  * reverse-chronologically by published date when known, falling back to
- * added date. Deterministic via a slug tie-break.
+ * added date.
  */
 export function selectArchiveWorks(works: readonly Work[]): Work[] {
   return works
@@ -337,16 +544,11 @@ export function selectArchiveWorks(works: readonly Work[]): Work[] {
 }
 
 /**
- * Public Start Here eligibility — stricter than Explore listing.
+ * Public Start Here eligibility.
  *
- * A work appears only when all of the following hold:
- *   - status is `listed` (draft and archived are excluded)
- *   - publicationState is `published` (developing / in-progress signposts are excluded)
- *   - startHereOrder is a positive integer
- *   - a usable public destination exists (canonicalUrl, or a distribution link)
- *
- * Setting startHereOrder alone is never enough. Social-media visitors must
- * never be sent into incomplete or placeholder content.
+ * Requires listed + published + positive order + hosted/summary with an
+ * accessible internal presentation. Reference works are excluded by default.
+ * External URLs are never required.
  */
 export function isPublicStartHereEligible(work: Work): boolean {
   return (
@@ -354,17 +556,27 @@ export function isPublicStartHereEligible(work: Work): boolean {
     work.publicationState === "published" &&
     work.startHereOrder !== null &&
     work.startHereOrder >= 1 &&
-    hasUsablePublicDestination(work)
+    work.contentMode !== "reference" &&
+    hasAccessibleInternalPresentation(work)
   );
 }
 
 /**
- * Public Start Here sequence: eligible listed+published works with a
- * positive startHereOrder, ascending. Deterministic when two works share
- * an order (publishedDate/date descending, then slug ascending).
- *
- * This is the authoritative public selector. `selectStartHere` remains as a
- * compatibility alias used by existing call sites and tests.
+ * @deprecated Destination helper retained for tests that still probe URL quality.
+ * Start Here no longer requires an external destination.
+ */
+export function hasUsablePublicDestination(
+  work: Pick<Work, "canonicalUrl" | "distributionLinks" | "workPath" | "href">
+): boolean {
+  if (work.href && isUsablePublicHref(work.href)) return true;
+  if (work.workPath && isUsablePublicHref(work.workPath)) return true;
+  if (work.canonicalUrl && isUsablePublicHref(work.canonicalUrl)) return true;
+  return work.distributionLinks.some((link) => isUsablePublicHref(link.url));
+}
+
+/**
+ * Public Start Here sequence: eligible works ascending by startHereOrder.
+ * Deterministic when two works share an order.
  */
 export function selectPublicStartHereWorks(works: readonly Work[]): Work[] {
   return works
@@ -389,19 +601,14 @@ export function selectFeaturedWorks(works: readonly Work[]): Work[] {
   return selectListedWorks(works).filter((work) => work.featured);
 }
 
-/**
- * Collection layer: listed items whose topics include the given collection
- * slug. A single work can appear in multiple collections through this
- * metadata without being duplicated in the source of truth.
- */
+/** Collection layer: listed items whose topics include the given collection slug. */
 export function selectByCollection(works: readonly Work[], collectionSlug: string): Work[] {
   return selectListedWorks(works).filter((work) => work.topics.includes(collectionSlug));
 }
 
 /**
  * Related-content foundation: other listed items sharing the same series,
- * then items sharing at least one topic. Excludes the item itself and stays
- * to a small, deliberately unranked-beyond-relevance limit.
+ * then items sharing at least one topic.
  */
 export function selectRelatedWorks(
   works: readonly Work[],
@@ -410,9 +617,7 @@ export function selectRelatedWorks(
 ): Work[] {
   const candidates = selectListedWorks(works).filter((work) => work.slug !== item.slug);
 
-  const bySeries = item.series
-    ? candidates.filter((work) => work.series === item.series)
-    : [];
+  const bySeries = item.series ? candidates.filter((work) => work.series === item.series) : [];
   const byTopic = candidates.filter(
     (work) => !bySeries.includes(work) && work.topics.some((t) => item.topics.includes(t))
   );
@@ -425,32 +630,111 @@ export function selectRelatedWorks(
   return related;
 }
 
+/** Whether a work may be shown on /works/[slug]. */
+export function isPublicWorkPageEligible(work: Work): boolean {
+  return (
+    work.status === "listed" &&
+    work.publicationState === "published" &&
+    isPublishedContentValid(work)
+  );
+}
+
+type RawWorksEntry = {
+  slug: string;
+  entry: {
+    title: unknown;
+    summary: string | null;
+    type: string;
+    contentMode?: string;
+    keyTakeaway?: string | null;
+    annotation?: string | null;
+    sourceTitle?: string | null;
+    sourceAuthor?: string | null;
+    sourcePublication?: string | null;
+    body: () => Promise<{ node?: unknown } | null>;
+    date: string | null;
+    publishedDate?: string | null;
+    publicationState: string;
+    canonicalUrl?: string | null;
+    seoCanonicalUrl?: string | null;
+    distributionLinks?: ReadonlyArray<{
+      platform?: string | null;
+      label?: string | null;
+      url?: string | null;
+    }> | null;
+    status: string;
+    topics?: ReadonlyArray<string | null> | null;
+    series?: string | null;
+    watchTime?: string | null;
+    readTime?: string | null;
+    thumbnail?: string | null;
+    featured?: boolean | null;
+    startHereOrder?: number | null;
+    origin?: string | null;
+    canonicalPlatform?: string | null;
+  };
+};
+
+function entryToInput(
+  slug: string,
+  entry: RawWorksEntry["entry"],
+  hasBody: boolean
+): WorkEntryInput {
+  const title =
+    typeof entry.title === "string"
+      ? entry.title
+      : entry.title &&
+          typeof entry.title === "object" &&
+          "name" in (entry.title as object) &&
+          typeof (entry.title as { name?: unknown }).name === "string"
+        ? (entry.title as { name: string }).name
+        : null;
+
+  return {
+    slug,
+    title,
+    summary: entry.summary,
+    type: entry.type,
+    contentMode: entry.contentMode,
+    keyTakeaway: entry.keyTakeaway,
+    annotation: entry.annotation,
+    sourceTitle: entry.sourceTitle,
+    sourceAuthor: entry.sourceAuthor,
+    sourcePublication: entry.sourcePublication,
+    hasBody,
+    date: entry.date,
+    publishedDate: entry.publishedDate,
+    publicationState: entry.publicationState,
+    canonicalUrl: entry.canonicalUrl,
+    seoCanonicalUrl: entry.seoCanonicalUrl,
+    distributionLinks: entry.distributionLinks,
+    status: entry.status,
+    topics: entry.topics,
+    series: entry.series,
+    watchTime: entry.watchTime,
+    readTime: entry.readTime,
+    thumbnail: entry.thumbnail,
+    featured: entry.featured,
+    startHereOrder: entry.startHereOrder,
+    origin: entry.origin,
+    canonicalPlatform: entry.canonicalPlatform,
+  };
+}
+
 async function readAllWorks(): Promise<Work[]> {
-  const entries = await reader.collections.works.all();
+  const entries = (await reader.collections.works.all()) as RawWorksEntry[];
   const works: Work[] = [];
 
   for (const { slug, entry } of entries) {
-    const work = normalizeWork({
-      slug,
-      title: typeof entry.title === "string" ? entry.title : null,
-      summary: entry.summary,
-      type: entry.type,
-      date: entry.date,
-      publishedDate: entry.publishedDate,
-      publicationState: entry.publicationState,
-      canonicalUrl: entry.canonicalUrl,
-      distributionLinks: entry.distributionLinks,
-      status: entry.status,
-      topics: entry.topics,
-      series: entry.series,
-      watchTime: entry.watchTime,
-      readTime: entry.readTime,
-      thumbnail: entry.thumbnail,
-      featured: entry.featured,
-      startHereOrder: entry.startHereOrder,
-      origin: entry.origin,
-      canonicalPlatform: entry.canonicalPlatform,
-    });
+    let hasBody = false;
+    try {
+      const bodyEntry = await entry.body();
+      hasBody = markdocNodeHasContent(bodyEntry?.node);
+    } catch {
+      hasBody = false;
+    }
+
+    const work = normalizeWork(entryToInput(slug, entry, hasBody));
     if (work) works.push(work);
   }
 
@@ -482,4 +766,46 @@ export async function getRelatedWorks(
   limit = 3
 ): Promise<Work[]> {
   return selectRelatedWorks(await readAllWorks(), item, limit);
+}
+
+export async function getWorkBySlug(slug: string): Promise<Work | null> {
+  const works = await readAllWorks();
+  return works.find((work) => work.slug === slug) ?? null;
+}
+
+/**
+ * Load a public work detail page. Returns null when the slug is missing,
+ * draft, archived, developing, or otherwise not publicly eligible.
+ */
+export async function getPublicWorkDetail(slug: string): Promise<WorkDetail | null> {
+  const entry = await reader.collections.works.read(slug);
+  if (!entry) return null;
+
+  let bodyNode: unknown = null;
+  let hasBody = false;
+  let body: RenderableTreeNode | null = null;
+  try {
+    const bodyEntry = await entry.body();
+    bodyNode = bodyEntry?.node ?? null;
+    hasBody = markdocNodeHasContent(bodyNode);
+    if (hasBody && bodyNode) {
+      body = Markdoc.transform(
+        bodyNode as Parameters<typeof Markdoc.transform>[0]
+      ) as RenderableTreeNode;
+    }
+  } catch {
+    hasBody = false;
+    body = null;
+  }
+
+  const work = normalizeWork(entryToInput(slug, entry as RawWorksEntry["entry"], hasBody));
+  if (!work || !isPublicWorkPageEligible(work)) return null;
+
+  return { ...work, body };
+}
+
+/** Slugs safe for generateStaticParams on /works/[slug]. */
+export async function getPublicWorkSlugs(): Promise<string[]> {
+  const works = await readAllWorks();
+  return works.filter(isPublicWorkPageEligible).map((work) => work.slug);
 }

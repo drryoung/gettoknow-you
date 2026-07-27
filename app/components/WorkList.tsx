@@ -28,24 +28,24 @@ export function isExternalHref(href: string): boolean {
   return /^https?:\/\//i.test(href);
 }
 
+function isLinkable(work: Work): boolean {
+  return work.status === "listed" && work.publicationState === "published";
+}
+
 export function WorkItem({
   work,
-  primaryLabel = "Canonical work",
+  primaryLabel = "Open",
 }: {
   work: Work;
   primaryLabel?: string;
 }) {
-  const isPublished = work.publicationState === "published" && work.canonicalUrl;
-  const title = isPublished ? (
-    <a
-      href={work.canonicalUrl!}
-      {...(isExternalHref(work.canonicalUrl!) ? { rel: "noopener noreferrer" } : {})}
-    >
-      {work.title}
-    </a>
-  ) : (
-    work.title
-  );
+  const linkable = isLinkable(work);
+  const href = work.href;
+  const title = linkable ? <a href={href}>{work.title}</a> : work.title;
+  const externalBadge =
+    work.contentMode === "reference" ? (
+      <span className="explore-list__badge">External source</span>
+    ) : null;
 
   return (
     <li className="explore-list__item">
@@ -60,20 +60,22 @@ export function WorkItem({
             <span>{work.watchTime || work.readTime}</span>
           </>
         )}
+        {externalBadge ? (
+          <>
+            <span aria-hidden="true"> · </span>
+            {externalBadge}
+          </>
+        ) : null}
       </p>
       <h2 className="explore-list__title">{title}</h2>
       <p className="explore-list__summary">{work.summary}</p>
       <p className="explore-list__links">
-        {isPublished ? (
-          <a
-            href={work.canonicalUrl!}
-            {...(isExternalHref(work.canonicalUrl!) ? { rel: "noopener noreferrer" } : {})}
-          >
-            {primaryLabel}
-          </a>
+        {linkable ? (
+          <a href={href}>{primaryLabel}</a>
         ) : (
           <span className="explore-list__developing">In development</span>
         )}
+        {/* Distribution links stay supplementary; primary navigation is internal. */}
         {work.distributionLinks.map((link) => (
           <a key={`${link.platform}-${link.url}`} href={link.url} rel="noopener noreferrer">
             {link.label || platformLabel(link.platform)}
@@ -94,7 +96,7 @@ export function WorkList({
   primaryLabel?: string;
 }) {
   if (works.length === 0) {
-    return <p className="explore-empty">{emptyMessage}</p>;
+    return emptyMessage ? <p className="explore-empty">{emptyMessage}</p> : null;
   }
 
   return (

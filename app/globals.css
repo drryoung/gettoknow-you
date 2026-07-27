@@ -431,6 +431,160 @@ h3 {
   font-style: italic;
 }
 
+.explore-list__badge {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.work-page {
+  padding-block: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+.work-page h1 {
+  max-width: 18ch;
+}
+
+.work-page__summary {
+  margin: 1rem 0 0;
+  max-width: var(--measure-editorial, 46ch);
+  font-size: 1.08rem;
+  line-height: 1.55;
+}
+
+.work-page__takeaway,
+.work-page__annotation,
+.work-citation {
+  margin: 1.25rem 0 0;
+  max-width: var(--measure-editorial, 46ch);
+}
+
+.work-page__takeaway {
+  padding: 0.9rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.work-page__series {
+  margin: 1.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.work-provenance {
+  margin: 2rem 0 0;
+  max-width: var(--measure-editorial, 46ch);
+}
+
+.work-provenance__row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: 0.35rem 1rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.95rem;
+}
+
+.work-provenance__row:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.work-provenance dt {
+  margin: 0;
+  color: var(--muted);
+}
+
+.work-provenance dd {
+  margin: 0;
+}
+
+.work-aside {
+  margin: 2rem 0 0;
+  max-width: var(--measure-editorial, 46ch);
+}
+
+.work-aside__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.work-aside__links {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.work-aside__links a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+.work-body {
+  margin: 1.75rem 0 0;
+  max-width: var(--measure-editorial, 46ch);
+}
+
+.work-body > h2 {
+  margin: 1.75rem 0 0.65rem;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+}
+
+.work-body > h3 {
+  margin: 1.35rem 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.work-body > p,
+.work-body li {
+  line-height: 1.65;
+}
+
+.work-body > p {
+  margin: 0.85rem 0 0;
+}
+
+.work-body blockquote {
+  margin: 1.25rem 0 0;
+  padding: 0.15rem 0 0.15rem 1rem;
+  border-left: 3px solid var(--accent);
+  color: var(--ink);
+  font-style: italic;
+}
+
+.work-body hr {
+  margin: 1.75rem 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.work-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.25rem 0 0;
+}
+
+.work-body a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+.work-body ul,
+.work-body ol {
+  margin: 0.85rem 0 0;
+  padding-left: 1.25rem;
+}
+
+
 .welcome-hero {
   min-height: 72vh;
   display: flex;

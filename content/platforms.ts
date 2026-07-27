@@ -13,6 +13,7 @@
  */
 
 const PLATFORM_LABELS: Record<string, string> = {
+  "gettoknow-you": "GetToKnow.You",
   instagram: "Instagram",
   xiaohongshu: "Xiaohongshu",
   youtube: "YouTube",
@@ -29,6 +30,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 /** Platforms a distribution link may point to. */
 export const DISTRIBUTION_PLATFORM_VALUES = [
+  "gettoknow-you",
   "instagram",
   "xiaohongshu",
   "youtube",
@@ -44,6 +46,7 @@ export type DistributionPlatform = (typeof DISTRIBUTION_PLATFORM_VALUES)[number]
 
 /** Platforms that may host the authoritative canonical version. */
 export const CANONICAL_PLATFORM_VALUES = [
+  "gettoknow-you",
   "website",
   "instagram",
   "xiaohongshu",
@@ -59,6 +62,7 @@ export type CanonicalPlatform = (typeof CANONICAL_PLATFORM_VALUES)[number];
 
 /** Where an item was first published, before any later distribution. */
 export const ORIGIN_VALUES = [
+  "gettoknow-you",
   "instagram",
   "xiaohongshu",
   "youtube",

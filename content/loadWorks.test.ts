@@ -1,10 +1,14 @@
 import {
   getArchiveWorks,
   getListedWorks,
+  getPublicWorkDetail,
   getStartHereWorks,
   hasUsablePublicDestination,
+  inferContentMode,
   isPublicStartHereEligible,
+  isPublicWorkPageEligible,
   isUsablePublicHref,
+  markdocNodeHasContent,
   normalizeWork,
   selectArchiveWorks,
   selectByCollection,
@@ -16,23 +20,36 @@ import {
   type Work,
 } from "./loadWorks";
 import { COLLECTIONS, isCollectionSlug } from "./collections";
-import { readFileSync, existsSync } from "fs";
+import { readdirSync, readFileSync, existsSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
+
 const root = process.cwd();
+
+const LONG_SUMMARY =
+  "A meaningful standalone summary long enough for published summary validation.";
 
 function work(
   partial: Partial<Work> & Pick<Work, "slug" | "title" | "date" | "status" | "publicationState">
 ): Work {
-  const defaultCanonical =
-    partial.publicationState === "developing" ? null : "https://www.instagram.com/p/fixture-work";
-  const canonicalUrl = partial.canonicalUrl !== undefined ? partial.canonicalUrl : defaultCanonical;
+  const { workPath: workPathOverride, href: hrefOverride, ...rest } = partial;
+  const workPath = workPathOverride ?? `/works/${partial.slug}`;
+  const href = hrefOverride ?? workPath;
   return {
-    summary: "Summary",
+    summary: LONG_SUMMARY,
     type: "essay",
+    contentMode: "summary",
+    keyTakeaway: null,
+    annotation: null,
+    sourceTitle: null,
+    sourceAuthor: null,
+    sourcePublication: null,
+    hasBody: false,
     publishedDate: null,
+    canonicalUrl: null,
     externalUrl: null,
     internalPath: null,
+    seoCanonicalUrl: null,
     distributionLinks: [],
     topics: [],
     series: null,
@@ -43,27 +60,101 @@ function work(
     startHereOrder: null,
     origin: null,
     canonicalPlatform: null,
-    ...partial,
-    canonicalUrl,
+    ...rest,
+    workPath,
+    href,
   };
 }
 
 describe("normalizeWork", () => {
-  it("keeps a published work with a canonical URL", () => {
+  it("excludes a published hosted work without a body", () => {
     const result = normalizeWork({
-      slug: "mandarinos",
-      title: "MandarinOS",
-      summary: "A project.",
-      type: "project",
+      slug: "empty-hosted",
+      title: "Empty Hosted",
+      summary: LONG_SUMMARY,
+      type: "essay",
+      contentMode: "hosted",
+      hasBody: false,
       date: "2026-07-25",
       publicationState: "published",
-      canonicalUrl: "https://www.mandarinos.app/",
       status: "listed",
     });
-    expect(result?.publicationState).toBe("published");
-    expect(result?.canonicalUrl).toBe("https://www.mandarinos.app/");
-    expect(result?.externalUrl).toBe("https://www.mandarinos.app/");
-    expect(result?.internalPath).toBeNull();
+    expect(result).toBeNull();
+  });
+
+  it("keeps a published hosted work with a body and no external URL", () => {
+    const result = normalizeWork({
+      slug: "hosted-essay",
+      title: "Hosted Essay",
+      summary: LONG_SUMMARY,
+      type: "essay",
+      contentMode: "hosted",
+      hasBody: true,
+      date: "2026-07-25",
+      publicationState: "published",
+      status: "listed",
+      canonicalPlatform: "gettoknow-you",
+    });
+    expect(result).not.toBeNull();
+    expect(result?.contentMode).toBe("hosted");
+    expect(result?.hasBody).toBe(true);
+    expect(result?.workPath).toBe("/works/hosted-essay");
+    expect(result?.canonicalUrl).toBe("/works/hosted-essay");
+    expect(result?.href).toBe("/works/hosted-essay");
+    expect(result?.externalUrl).toBeNull();
+  });
+
+  it("keeps a published summary with a meaningful summary and no external URL", () => {
+    const result = normalizeWork({
+      slug: "summary-only",
+      title: "Summary Only",
+      summary: LONG_SUMMARY,
+      type: "essay",
+      contentMode: "summary",
+      date: "2026-07-25",
+      publicationState: "published",
+      canonicalUrl: "",
+      status: "listed",
+    });
+    expect(result).not.toBeNull();
+    expect(result?.contentMode).toBe("summary");
+    expect(result?.canonicalUrl).toBeNull();
+    expect(result?.workPath).toBe("/works/summary-only");
+    expect(result?.href).toBe("/works/summary-only");
+  });
+
+  it("keeps a published reference with a usable external URL and annotation", () => {
+    const result = normalizeWork({
+      slug: "external-ref",
+      title: "External Ref",
+      summary: LONG_SUMMARY,
+      type: "article",
+      contentMode: "reference",
+      annotation: "A short note explaining why this external source belongs in the commons.",
+      date: "2026-07-25",
+      publicationState: "published",
+      canonicalUrl: "https://www.example.org/essay",
+      status: "listed",
+    });
+    expect(result).not.toBeNull();
+    expect(result?.contentMode).toBe("reference");
+    expect(result?.externalUrl).toBe("https://www.example.org/essay");
+  });
+
+  it("excludes a published reference without a usable source URL", () => {
+    const result = normalizeWork({
+      slug: "broken-ref",
+      title: "Broken Ref",
+      summary: LONG_SUMMARY,
+      type: "article",
+      contentMode: "reference",
+      annotation: "Annotation without a destination is not enough for a reference.",
+      date: "2026-07-25",
+      publicationState: "published",
+      canonicalUrl: "",
+      status: "listed",
+    });
+    expect(result).toBeNull();
   });
 
   it("keeps a developing work without a canonical URL", () => {
@@ -80,53 +171,105 @@ describe("normalizeWork", () => {
     expect(result).not.toBeNull();
     expect(result?.publicationState).toBe("developing");
     expect(result?.canonicalUrl).toBeNull();
+    expect(result?.contentMode).toBe("summary");
   });
 
-  it("excludes a published work that lacks a canonical URL", () => {
+  it("infers summary for legacy records missing contentMode", () => {
     const result = normalizeWork({
-      slug: "broken",
-      title: "Broken",
-      summary: "Missing URL.",
+      slug: "legacy-summary",
+      title: "Legacy Summary",
+      summary: LONG_SUMMARY,
       type: "essay",
       date: "2026-07-25",
       publicationState: "published",
-      canonicalUrl: "",
       status: "listed",
     });
-    expect(result).toBeNull();
+    expect(result?.contentMode).toBe("summary");
   });
 
-  it("excludes a published work with a whitespace-only canonical URL", () => {
+  it("infers reference when legacy record has an external URL and no body", () => {
     const result = normalizeWork({
-      slug: "whitespace-url",
-      title: "Whitespace URL",
-      summary: "Blank URL padded with spaces.",
-      type: "essay",
+      slug: "legacy-ref",
+      title: "Legacy Ref",
+      summary: LONG_SUMMARY,
+      type: "article",
       date: "2026-07-25",
       publicationState: "published",
-      canonicalUrl: "   ",
+      canonicalUrl: "https://www.example.org/legacy",
       status: "listed",
     });
-    expect(result).toBeNull();
+    expect(result?.contentMode).toBe("reference");
   });
 
-  it("accepts an internal site path as a published canonical URL", () => {
+  it("treats an invalid contentMode string as missing and infers", () => {
+    expect(
+      inferContentMode({
+        contentMode: "not-a-mode",
+        canonicalUrl: "",
+        hasBody: false,
+      })
+    ).toBe("summary");
+    expect(
+      inferContentMode({
+        contentMode: "hosted-please",
+        canonicalUrl: "https://www.example.org/x",
+        hasBody: false,
+      })
+    ).toBe("reference");
+
     const result = normalizeWork({
-      slug: "signpost",
-      title: "Signpost",
-      summary: "Points at the charter page.",
+      slug: "bad-mode",
+      title: "Bad Mode",
+      summary: LONG_SUMMARY,
+      type: "essay",
+      contentMode: "hosted-please",
+      date: "2026-07-25",
+      publicationState: "published",
+      status: "listed",
+    });
+    expect(result?.contentMode).toBe("summary");
+  });
+
+  it("resolves gettoknow-you + editorial /charter to first-party paths", () => {
+    const result = normalizeWork({
+      slug: "gettoknowyou-community-charter",
+      title: "GetToKnow.You Community Charter",
+      summary: LONG_SUMMARY,
       type: "other",
+      contentMode: "summary",
       date: "2026-07-25",
       publicationState: "published",
       canonicalUrl: "/charter",
       status: "listed",
+      canonicalPlatform: "gettoknow-you",
+      keyTakeaway: "Conversation is the mechanism.",
     });
     expect(result?.canonicalUrl).toBe("/charter");
     expect(result?.internalPath).toBe("/charter");
-    expect(result?.externalUrl).toBeNull();
+    expect(result?.href).toBe("/charter");
+    expect(result?.workPath).toBe("/works/gettoknowyou-community-charter");
   });
 
-  it("ignores a canonical URL provided on a developing entry, so no link is ever shown", () => {
+  it("keeps a published work with an external canonical URL", () => {
+    const result = normalizeWork({
+      slug: "mandarinos",
+      title: "MandarinOS",
+      summary: LONG_SUMMARY,
+      type: "project",
+      contentMode: "summary",
+      date: "2026-07-25",
+      publicationState: "published",
+      canonicalUrl: "https://www.mandarinos.app/",
+      status: "listed",
+    });
+    expect(result?.publicationState).toBe("published");
+    expect(result?.canonicalUrl).toBe("https://www.mandarinos.app/");
+    expect(result?.externalUrl).toBe("https://www.mandarinos.app/");
+    expect(result?.internalPath).toBeNull();
+    expect(result?.href).toBe("/works/mandarinos");
+  });
+
+  it("ignores a canonical URL provided on a developing entry", () => {
     const result = normalizeWork({
       slug: "developing-with-url",
       title: "Developing With URL",
@@ -146,7 +289,7 @@ describe("normalizeWork", () => {
     const base = {
       slug: "malformed",
       title: "Malformed",
-      summary: "Bad enum values.",
+      summary: LONG_SUMMARY,
       date: "2026-07-25",
       canonicalUrl: "https://example.com",
       status: "listed",
@@ -185,6 +328,12 @@ describe("normalizeWork", () => {
       status: "listed",
     });
     expect(result).not.toBeNull();
+    expect(result?.contentMode).toBe("summary");
+    expect(result?.keyTakeaway).toBeNull();
+    expect(result?.annotation).toBeNull();
+    expect(result?.sourceTitle).toBeNull();
+    expect(result?.hasBody).toBe(false);
+    expect(result?.seoCanonicalUrl).toBeNull();
     expect(result?.topics).toEqual([]);
     expect(result?.series).toBeNull();
     expect(result?.watchTime).toBeNull();
@@ -232,16 +381,100 @@ describe("normalizeWork", () => {
       const result = normalizeWork({
         slug: "bad-order",
         title: "Bad Order",
-        summary: "Order must be a positive integer.",
+        summary: LONG_SUMMARY,
         type: "essay",
+        contentMode: "summary",
         date: "2026-07-25",
         publicationState: "published",
-        canonicalUrl: "https://example.com/work",
         status: "listed",
         startHereOrder,
       });
       expect(result?.startHereOrder).toBeNull();
     }
+  });
+});
+
+describe("markdocNodeHasContent", () => {
+  it("returns true for text and image nodes", () => {
+    expect(markdocNodeHasContent("hello")).toBe(true);
+    expect(markdocNodeHasContent({ type: "image" })).toBe(true);
+    expect(
+      markdocNodeHasContent({
+        type: "document",
+        children: [{ type: "paragraph", children: ["body text"] }],
+      })
+    ).toBe(true);
+    expect(
+      markdocNodeHasContent({
+        type: "paragraph",
+        children: [{ type: "text", attributes: { content: "Keystatic text node" }, children: [] }],
+      })
+    ).toBe(true);
+  });
+
+  it("returns false for empty or blank trees", () => {
+    expect(markdocNodeHasContent(null)).toBe(false);
+    expect(markdocNodeHasContent("   ")).toBe(false);
+    expect(markdocNodeHasContent({ type: "document", children: [] })).toBe(false);
+    expect(
+      markdocNodeHasContent({
+        type: "document",
+        children: [{ type: "paragraph", children: ["  "] }],
+      })
+    ).toBe(false);
+  });
+});
+
+describe("isPublicWorkPageEligible", () => {
+  it("is true for a listed published valid summary", () => {
+    expect(
+      isPublicWorkPageEligible(
+        work({
+          slug: "eligible",
+          title: "Eligible",
+          date: "2025-01-01",
+          status: "listed",
+          publicationState: "published",
+          contentMode: "summary",
+        })
+      )
+    ).toBe(true);
+  });
+
+  it("is false for draft, archived, and developing works", () => {
+    expect(
+      isPublicWorkPageEligible(
+        work({
+          slug: "draft",
+          title: "Draft",
+          date: "2025-01-01",
+          status: "draft",
+          publicationState: "published",
+        })
+      )
+    ).toBe(false);
+    expect(
+      isPublicWorkPageEligible(
+        work({
+          slug: "archived",
+          title: "Archived",
+          date: "2025-01-01",
+          status: "archived",
+          publicationState: "published",
+        })
+      )
+    ).toBe(false);
+    expect(
+      isPublicWorkPageEligible(
+        work({
+          slug: "developing",
+          title: "Developing",
+          date: "2025-01-01",
+          status: "listed",
+          publicationState: "developing",
+        })
+      )
+    ).toBe(false);
   });
 });
 
@@ -367,55 +600,186 @@ describe("selectListedWorks", () => {
 describe("selectArchiveWorks", () => {
   it("includes listed and archived works but excludes drafts", () => {
     const result = selectArchiveWorks([
-      work({ slug: "listed-item", title: "Listed", date: "2025-01-01", status: "listed", publicationState: "published" }),
-      work({ slug: "archived-item", title: "Archived", date: "2024-01-01", status: "archived", publicationState: "published" }),
-      work({ slug: "draft-item", title: "Draft", date: "2026-01-01", status: "draft", publicationState: "developing" }),
+      work({
+        slug: "listed-item",
+        title: "Listed",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+      }),
+      work({
+        slug: "archived-item",
+        title: "Archived",
+        date: "2024-01-01",
+        status: "archived",
+        publicationState: "published",
+      }),
+      work({
+        slug: "draft-item",
+        title: "Draft",
+        date: "2026-01-01",
+        status: "draft",
+        publicationState: "developing",
+      }),
     ]);
     expect(result.map((w) => w.slug).sort()).toEqual(["archived-item", "listed-item"]);
   });
 
   it("orders deterministically, preferring publishedDate over added date", () => {
     const result = selectArchiveWorks([
-      work({ slug: "a", title: "A", date: "2025-01-01", publishedDate: "2020-01-01", status: "listed", publicationState: "published" }),
-      work({ slug: "b", title: "B", date: "2025-01-01", publishedDate: "2024-01-01", status: "listed", publicationState: "published" }),
-      work({ slug: "c", title: "C", date: "2025-01-01", status: "listed", publicationState: "published" }),
+      work({
+        slug: "a",
+        title: "A",
+        date: "2025-01-01",
+        publishedDate: "2020-01-01",
+        status: "listed",
+        publicationState: "published",
+      }),
+      work({
+        slug: "b",
+        title: "B",
+        date: "2025-01-01",
+        publishedDate: "2024-01-01",
+        status: "listed",
+        publicationState: "published",
+      }),
+      work({
+        slug: "c",
+        title: "C",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+      }),
     ]);
-    // c has no publishedDate, so it falls back to `date` (2025-01-01), placing it first.
     expect(result.map((w) => w.slug)).toEqual(["c", "b", "a"]);
   });
 });
 
 describe("selectStartHere / selectPublicStartHereWorks", () => {
-  it("includes a listed published work with a valid order and usable destination", () => {
+  it("includes a listed published summary with order and accessible internal presentation", () => {
     const eligible = work({
       slug: "ready",
       title: "Ready",
       date: "2025-01-01",
       status: "listed",
       publicationState: "published",
-      canonicalUrl: "https://www.instagram.com/p/ready",
+      contentMode: "summary",
+      keyTakeaway: "Visitors can understand the idea without leaving the site.",
       startHereOrder: 1,
     });
     expect(isPublicStartHereEligible(eligible)).toBe(true);
-    expect(hasUsablePublicDestination(eligible)).toBe(true);
     expect(selectStartHere([eligible]).map((w) => w.slug)).toEqual(["ready"]);
     expect(selectPublicStartHereWorks([eligible]).map((w) => w.slug)).toEqual(["ready"]);
+    expect(selectStartHere).toBe(selectPublicStartHereWorks);
+  });
+
+  it("includes a summary with only a long summary and no external destination", () => {
+    const result = selectPublicStartHereWorks([
+      work({
+        slug: "internal-only",
+        title: "Internal Only",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+        contentMode: "summary",
+        summary:
+          "This summary is long enough on its own to qualify as accessible internal presentation.",
+        canonicalUrl: null,
+        distributionLinks: [],
+        startHereOrder: 1,
+      }),
+    ]);
+    expect(result.map((w) => w.slug)).toEqual(["internal-only"]);
+  });
+
+  it("excludes reference works even when they carry an order", () => {
+    const result = selectStartHere([
+      work({
+        slug: "ref",
+        title: "Ref",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+        contentMode: "reference",
+        annotation: "Annotated external source.",
+        canonicalUrl: "https://www.example.org/ref",
+        startHereOrder: 1,
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("excludes hosted works without a body", () => {
+    const result = selectStartHere([
+      work({
+        slug: "empty-hosted",
+        title: "Empty Hosted",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+        contentMode: "hosted",
+        hasBody: false,
+        startHereOrder: 1,
+      }),
+    ]);
+    expect(result).toHaveLength(0);
   });
 
   it("respects ascending startHereOrder and excludes items without one", () => {
     const result = selectStartHere([
-      work({ slug: "third", title: "Third", date: "2025-01-01", status: "listed", publicationState: "published", startHereOrder: 3 }),
-      work({ slug: "first", title: "First", date: "2025-01-01", status: "listed", publicationState: "published", startHereOrder: 1 }),
-      work({ slug: "unordered", title: "Unordered", date: "2025-01-01", status: "listed", publicationState: "published" }),
-      work({ slug: "second", title: "Second", date: "2025-01-01", status: "listed", publicationState: "published", startHereOrder: 2 }),
+      work({
+        slug: "third",
+        title: "Third",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+        startHereOrder: 3,
+      }),
+      work({
+        slug: "first",
+        title: "First",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+        startHereOrder: 1,
+      }),
+      work({
+        slug: "unordered",
+        title: "Unordered",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+      }),
+      work({
+        slug: "second",
+        title: "Second",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+        startHereOrder: 2,
+      }),
     ]);
     expect(result.map((w) => w.slug)).toEqual(["first", "second", "third"]);
   });
 
   it("excludes draft and archived works even if they carry an order", () => {
     const result = selectStartHere([
-      work({ slug: "archived", title: "Archived", date: "2025-01-01", status: "archived", publicationState: "published", startHereOrder: 1 }),
-      work({ slug: "draft", title: "Draft", date: "2025-01-01", status: "draft", publicationState: "published", startHereOrder: 2 }),
+      work({
+        slug: "archived",
+        title: "Archived",
+        date: "2025-01-01",
+        status: "archived",
+        publicationState: "published",
+        startHereOrder: 1,
+      }),
+      work({
+        slug: "draft",
+        title: "Draft",
+        date: "2025-01-01",
+        status: "draft",
+        publicationState: "published",
+        startHereOrder: 2,
+      }),
     ]);
     expect(result).toHaveLength(0);
   });
@@ -435,47 +799,42 @@ describe("selectStartHere / selectPublicStartHereWorks", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("excludes a work without a usable public destination", () => {
-    const result = selectStartHere([
-      work({
-        slug: "no-destination",
-        title: "No Destination",
-        date: "2025-01-01",
-        status: "listed",
-        publicationState: "published",
-        canonicalUrl: null,
-        distributionLinks: [],
-        startHereOrder: 1,
-      }),
-    ]);
-    expect(result).toHaveLength(0);
-  });
-
-  it("excludes placeholder, local, and malformed destinations", () => {
-    const cases = ["#", "TODO", "https://example.com/x", "http://localhost/x", "not-a-url", "/keystatic"];
-    for (const canonicalUrl of cases) {
-      expect(isUsablePublicHref(canonicalUrl)).toBe(false);
-      const result = selectPublicStartHereWorks([
-        work({
-          slug: "bad-dest",
-          title: "Bad Dest",
-          date: "2025-01-01",
-          status: "listed",
-          publicationState: "published",
-          canonicalUrl,
-          startHereOrder: 1,
-        }),
-      ]);
-      expect(result).toHaveLength(0);
-    }
+  it("still validates href quality helpers without gating Start Here on external destinations", () => {
+    expect(isUsablePublicHref("#")).toBe(false);
+    expect(isUsablePublicHref("TODO")).toBe(false);
+    expect(isUsablePublicHref("https://example.com/x")).toBe(false);
+    expect(isUsablePublicHref("http://localhost/x")).toBe(false);
+    expect(isUsablePublicHref("/keystatic")).toBe(false);
     expect(isUsablePublicHref("/charter")).toBe(true);
     expect(isUsablePublicHref("https://www.instagram.com/p/example")).toBe(true);
     expect(
-      hasUsablePublicDestination({
-        canonicalUrl: "https://example.com/nope",
-        distributionLinks: [{ platform: "instagram", label: null, url: "https://www.instagram.com/p/ok" }],
-      })
+      hasUsablePublicDestination(
+        work({
+          slug: "with-href",
+          title: "With Href",
+          date: "2025-01-01",
+          status: "listed",
+          publicationState: "published",
+          canonicalUrl: "https://example.com/nope",
+          distributionLinks: [
+            { platform: "instagram", label: null, url: "https://www.instagram.com/p/ok" },
+          ],
+        })
+      )
     ).toBe(true);
+
+    const withoutExternal = work({
+      slug: "no-external",
+      title: "No External",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "published",
+      canonicalUrl: null,
+      distributionLinks: [],
+      startHereOrder: 1,
+    });
+    expect(isPublicStartHereEligible(withoutExternal)).toBe(true);
+    expect(selectPublicStartHereWorks([withoutExternal])).toHaveLength(1);
   });
 
   it("excludes invalid or non-positive orders", () => {
@@ -487,7 +846,6 @@ describe("selectStartHere / selectPublicStartHereWorks", () => {
       publicationState: "published",
       startHereOrder: null,
     });
-    // Simulate a stale order that slipped past normalisation.
     const negative = { ...zero, slug: "negative", startHereOrder: -3 };
     expect(selectStartHere([zero, negative])).toHaveLength(0);
   });
@@ -513,7 +871,6 @@ describe("selectStartHere / selectPublicStartHereWorks", () => {
         startHereOrder: 1,
       }),
     ]);
-    // Newer publishedDate first, then slug.
     expect(result.map((w) => w.slug)).toEqual(["alpha", "zeta"]);
   });
 });
@@ -521,9 +878,30 @@ describe("selectStartHere / selectPublicStartHereWorks", () => {
 describe("selectFeaturedWorks", () => {
   it("returns only listed items marked featured", () => {
     const result = selectFeaturedWorks([
-      work({ slug: "featured", title: "Featured", date: "2025-01-01", status: "listed", publicationState: "published", featured: true }),
-      work({ slug: "plain", title: "Plain", date: "2025-01-01", status: "listed", publicationState: "published", featured: false }),
-      work({ slug: "featured-archived", title: "Featured Archived", date: "2025-01-01", status: "archived", publicationState: "published", featured: true }),
+      work({
+        slug: "featured",
+        title: "Featured",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+        featured: true,
+      }),
+      work({
+        slug: "plain",
+        title: "Plain",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+        featured: false,
+      }),
+      work({
+        slug: "featured-archived",
+        title: "Featured Archived",
+        date: "2025-01-01",
+        status: "archived",
+        publicationState: "published",
+        featured: true,
+      }),
     ]);
     expect(result.map((w) => w.slug)).toEqual(["featured"]);
   });
@@ -547,8 +925,22 @@ describe("selectByCollection", () => {
   });
 
   it("excludes items that do not belong to the collection", () => {
-    const inCollection = work({ slug: "in", title: "In", date: "2025-01-01", status: "listed", publicationState: "published", topics: ["china"] });
-    const outOfCollection = work({ slug: "out", title: "Out", date: "2025-01-01", status: "listed", publicationState: "published", topics: ["workplace"] });
+    const inCollection = work({
+      slug: "in",
+      title: "In",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "published",
+      topics: ["china"],
+    });
+    const outOfCollection = work({
+      slug: "out",
+      title: "Out",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "published",
+      topics: ["workplace"],
+    });
     const result = selectByCollection([inCollection, outOfCollection], "china");
     expect(result.map((w) => w.slug)).toEqual(["in"]);
   });
@@ -602,15 +994,23 @@ describe("selectRelatedWorks", () => {
 });
 
 describe("getListedWorks", () => {
-  it("loads the initial commons entries through Keystatic", async () => {
+  it("loads mdoc works through Keystatic", async () => {
     const works = await getListedWorks();
     expect(works.length).toBeGreaterThanOrEqual(6);
     const bySlug = Object.fromEntries(works.map((w) => [w.slug, w]));
     expect(bySlug.mandarinos?.publicationState).toBe("published");
     expect(bySlug.mandarinos?.canonicalUrl).toBe("https://www.mandarinos.app/");
+    expect(bySlug.mandarinos?.href).toBe("/works/mandarinos");
     expect(bySlug["gettoknowyou-community-charter"]?.canonicalUrl).toBe("/charter");
+    expect(bySlug["gettoknowyou-community-charter"]?.href).toBe("/charter");
     expect(bySlug.conversationos?.publicationState).toBe("developing");
     expect(bySlug.conversationos?.canonicalUrl).toBeNull();
+  });
+
+  it("stores works as .mdoc only (no leftover .yaml files)", () => {
+    const files = readdirSync(path.join(root, "content/works"));
+    expect(files.some((name) => name.endsWith(".mdoc"))).toBe(true);
+    expect(files.filter((name) => name.endsWith(".yaml") || name.endsWith(".yml"))).toEqual([]);
   });
 
   it("never returns a draft seed item", async () => {
@@ -622,8 +1022,16 @@ describe("getListedWorks", () => {
   it("loads existing records that predate origin and canonicalPlatform safely", async () => {
     const works = await getListedWorks();
     const bySlug = Object.fromEntries(works.map((w) => [w.slug, w]));
-    expect(bySlug.mandarinos?.origin).toBeNull();
-    expect(bySlug.mandarinos?.canonicalPlatform).toBeNull();
+    expect(bySlug["better-conversations"]?.origin).toBeNull();
+    expect(bySlug["better-conversations"]?.canonicalPlatform).toBeNull();
+  });
+
+  it("loads the founder summary body onto the public work page", async () => {
+    const detail = await getPublicWorkDetail("conversation-missed-opportunity");
+    expect(detail?.hasBody).toBe(true);
+    expect(detail?.body).not.toBeNull();
+    expect(detail?.contentMode).toBe("summary");
+    expect(detail?.href).toBe("/works/conversation-missed-opportunity");
   });
 
   it("keeps the published teenage founder story as a single Start Here entry", async () => {
@@ -636,11 +1044,11 @@ describe("getListedWorks", () => {
     expect(listedMatches).toHaveLength(1);
     expect(startHereMatches).toHaveLength(1);
     expect(legacyMatches).toHaveLength(0);
+    expect(startHereMatches[0]?.title).toBe("Conversation — Missed Opportunity");
     expect(startHereMatches[0]?.startHereOrder).toBe(1);
     expect(startHereMatches[0]?.publicationState).toBe("published");
-    expect(startHereMatches[0]?.canonicalUrl).toMatch(/^https:\/\//);
+    expect(startHereMatches[0]?.href).toBe("/works/conversation-missed-opportunity");
     expect(startHere.every((w) => w.publicationState === "published")).toBe(true);
-    expect(startHere.every((w) => w.canonicalUrl)).toBe(true);
   });
 });
 
@@ -725,8 +1133,9 @@ describe("distribution platforms and provenance", () => {
     const result = normalizeWork({
       slug: "known-provenance",
       title: "Known Provenance",
-      summary: "Good provenance values.",
+      summary: LONG_SUMMARY,
       type: "video",
+      contentMode: "summary",
       date: "2026-07-25",
       publicationState: "published",
       canonicalUrl: "https://youtube.com/watch?v=example",
@@ -736,6 +1145,7 @@ describe("distribution platforms and provenance", () => {
     });
     expect(result?.origin).toBe("instagram");
     expect(result?.canonicalPlatform).toBe("youtube");
+    expect(result?.href).toBe("/works/known-provenance");
   });
 });
 
@@ -756,10 +1166,11 @@ describe("getStartHereWorks", () => {
     expect(works.length).toBeGreaterThan(0);
     expect(works.every((w) => w.status === "listed")).toBe(true);
     expect(works.every((w) => w.publicationState === "published")).toBe(true);
+    expect(works.every((w) => w.contentMode !== "reference")).toBe(true);
     expect(works.every((w) => typeof w.startHereOrder === "number" && w.startHereOrder! >= 1)).toBe(
       true
     );
-    expect(works.every((w) => Boolean(w.canonicalUrl))).toBe(true);
+    expect(works.every((w) => w.href.startsWith("/"))).toBe(true);
     const orders = works.map((w) => w.startHereOrder);
     expect([...orders]).toEqual([...orders].sort((a, b) => (a ?? 0) - (b ?? 0)));
   });
@@ -770,8 +1181,6 @@ describe("getStartHereWorks", () => {
     expect(slugs.has("conversationos")).toBe(false);
     expect(slugs.has("better-conversations")).toBe(false);
     expect(slugs.has("trust-and-human-connection")).toBe(false);
-    // Xiaohongshu-only destinations are kept in the library but not in the
-    // universal social-profile Start Here pathway.
     expect(slugs.has("the-dunedin-checkout-success-story")).toBe(false);
   });
 
@@ -783,28 +1192,43 @@ describe("getStartHereWorks", () => {
       "mandarinos",
     ]);
     expect(works[0]?.title).toBe("Conversation — Missed Opportunity");
+    expect(works.map((w) => w.href)).toEqual([
+      "/works/conversation-missed-opportunity",
+      "/charter",
+      "/works/mandarinos",
+    ]);
+    expect(
+      works.every(
+        (w) =>
+          !/instagram\.com|xiaohongshu\.com/i.test(w.href) &&
+          !/^https?:\/\//i.test(w.href)
+      )
+    ).toBe(true);
   });
 });
 
 describe("works collection boundaries", () => {
-  it("stores works under content/works, not as a charter twin", () => {
+  it("stores works under content/works as Markdoc with contentMode", () => {
     expect(existsSync(path.join(root, "content/works"))).toBe(true);
     expect(existsSync(path.join(root, "content/community-charter.mdoc"))).toBe(true);
     const config = readFileSync(path.join(root, "keystatic.config.ts"), "utf8");
     expect(config).toContain('path: "content/works/*"');
     expect(config).toContain("works: collection(");
+    expect(config).toContain('format: { contentField: "body" }');
+    expect(config).toContain("contentMode");
     expect(config).toContain("publicationState");
     expect(config).toContain('path: "content/community-charter"');
+    expect(config).not.toContain('format: { data: "yaml" }');
   });
 
-  it("exposes a single platform taxonomy shared by distributionLinks, canonicalPlatform, and origin", () => {
+  it("exposes a single platform taxonomy including gettoknow-you", () => {
     const config = readFileSync(path.join(root, "keystatic.config.ts"), "utf8");
     expect(config).toContain("DISTRIBUTION_PLATFORM_OPTIONS");
     expect(config).toContain("CANONICAL_PLATFORM_OPTIONS");
     expect(config).toContain("ORIGIN_OPTIONS");
-    // The taxonomy itself must live in one shared module, not be re-declared here.
     expect(config).not.toContain('"xiaohongshu"');
     const platforms = readFileSync(path.join(root, "content/platforms.ts"), "utf8");
+    expect(platforms).toContain('"gettoknow-you"');
     expect(platforms).toContain('"instagram"');
     expect(platforms).toContain('"xiaohongshu"');
   });
@@ -829,6 +1253,7 @@ describe("works collection boundaries", () => {
     expect(page).toContain("New here? Start here.");
     expect(page).not.toContain("View Start Here");
     expect(page).toContain("WorkList");
+    expect(list).toContain("work.href");
     expect(list).toContain("work.title");
     expect(list).toContain("work.summary");
     expect(list).toContain("In development");
@@ -848,6 +1273,13 @@ describe("works collection boundaries", () => {
     expect(page).not.toContain("coming soon");
     expect(explore).toContain("getStartHereWorks");
     expect(explore).toContain('href="/start-here"');
+  });
+
+  it("exposes a public /works/[slug] detail page", () => {
+    expect(existsSync(path.join(root, "app/works/[slug]/page.tsx"))).toBe(true);
+    const page = readFileSync(path.join(root, "app/works/[slug]/page.tsx"), "utf8");
+    expect(page).toContain("getPublicWorkDetail");
+    expect(page).toContain("getPublicWorkSlugs");
   });
 
   it("does not render a developing entry as an empty canonical link in the page source", () => {
