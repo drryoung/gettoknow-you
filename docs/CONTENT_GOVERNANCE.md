@@ -64,10 +64,36 @@ Optional fields that make an item findable across the three visitor layers (Star
 * `series` — optional grouping of related items (used for the related-content foundation in `selectRelatedWorks`).
 * `watchTime` / `readTime` — optional plain-text duration.
 * `featured` — eligibility for prominent display.
-* `startHereOrder` — position in the curated Start Here sequence. Leave blank to exclude an item from Start Here.
+* `startHereOrder` — position in the curated public Start Here sequence on `/start-here` (and the short preview on `/explore`). Leave blank to exclude an item. **Setting an order alone is not enough**: the work must also be `listed`, `published`, and have a working destination (see “Public Start Here” below).
 * `thumbnail` — optional image path/URL, entered as plain text. There is no image-upload field or `public/` asset convention yet; paste a path/URL to an image that already exists rather than expecting Keystatic to host one.
 
 All of these are optional. Missing values must never break rendering — the loader falls back to `null`/`[]`/`false` defaults.
+
+### Public Start Here (`/start-here`)
+
+`/start-here` is the canonical public introductory route for first-time visitors, including people arriving from Instagram or Xiaohongshu. Social profiles may safely link to it.
+
+Inclusion is controlled by `getStartHereWorks()` / `selectPublicStartHereWorks()` (with `selectStartHere` kept as a compatibility alias). A work appears only when **all** of these hold:
+
+* `status` is `listed`
+* `publicationState` is `published` (developing / in-progress signposts are excluded)
+* `startHereOrder` is a positive integer
+* a usable public destination exists (`canonicalUrl`, or a distribution link)
+
+Draft, archived, developing, placeholder, and destination-less works never appear — even if they still carry a leftover order value. `/explore` shows only the first three eligible items from the same selector, with a link to the full `/start-here` page. If nothing qualifies, the Explore preview section is hidden.
+
+**Operational checklist before adding a work to Start Here:**
+
+1. Confirm the work is complete and ready for an unfamiliar visitor.
+2. Confirm `status` is `listed`.
+3. Confirm `publicationState` is `published`.
+4. Confirm the canonical URL (or a distribution URL) works when opened.
+5. Assign a unique positive `startHereOrder`.
+6. Preview `/start-here` locally.
+7. Check the layout on a narrow mobile width.
+8. Commit and push.
+9. Confirm the Vercel deployment succeeds.
+10. Test the production `/start-here` URL.
 
 ### Provenance: `origin`, `canonicalPlatform`, and `canonicalUrl`
 
@@ -133,9 +159,9 @@ Page components control visual presentation (layout, typography, motion). They m
 6. Set `origin` and `canonicalPlatform` if known.
 7. Confirm the Canonical URL.
 8. Change `status` to `listed` when the item is ready to be public.
-9. Set Start Here order only for curated items meant to appear in that sequence.
+9. Set Start Here order only for curated items that already meet the public Start Here checklist (listed, published, working destination).
 10. Save, review the Git diff under `content/works/`, commit, push, and allow the existing deploy workflow (Vercel) to publish it.
-
+11. If the item was added to Start Here, confirm `/start-here` on production after deploy.
 ## What content files must not contain
 
 Charter and works content files must not include:

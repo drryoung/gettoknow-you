@@ -7,7 +7,8 @@
  *
  * Three visitor layers are derived from this one collection, never
  * duplicated into separate content sources:
- *   - Start Here  → items with a `startHereOrder`, ascending
+ *   - Start Here  → listed + published items with a positive `startHereOrder`
+ *                   and a usable destination, ascending (public-safe)
  *   - Collections → items whose `topics` include a given collection slug
  *   - Archive     → every non-draft item, reverse-chronological
  *
@@ -137,6 +138,50 @@ function isExternalHref(href: string): boolean {
   return /^https?:\/\//i.test(href);
 }
 
+const BLOCKED_PUBLIC_HOSTS = new Set(["localhost", "127.0.0.1", "example.com", "www.example.com"]);
+
+/**
+ * Destination quality for public Start Here (and related link safety).
+ * A non-empty string is not enough: reject placeholders, local/dev hosts,
+ * malformed URLs, and non-http(s) schemes. Internal paths must be absolute
+ * site paths and must not point at Keystatic or API surfaces.
+ */
+export function isUsablePublicHref(href: string): boolean {
+  const trimmed = href.trim();
+  if (!trimmed) return false;
+
+  const lower = trimmed.toLowerCase();
+  if (
+    lower === "#" ||
+    lower.startsWith("#") ||
+    lower.includes("todo") ||
+    lower.includes("placeholder") ||
+    lower.includes("coming-soon") ||
+    lower.includes("coming soon")
+  ) {
+    return false;
+  }
+
+  if (isExternalHref(trimmed)) {
+    try {
+      const url = new URL(trimmed);
+      if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+      const host = url.hostname.toLowerCase();
+      if (BLOCKED_PUBLIC_HOSTS.has(host) || host.endsWith(".localhost")) return false;
+      if (!host.includes(".")) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return false;
+  if (trimmed.startsWith("/keystatic") || trimmed.startsWith("/api/")) return false;
+  // Reject obviously broken path shapes while allowing ordinary site routes.
+  if (/\s/.test(trimmed)) return false;
+  return true;
+}
+
 /**
  * Normalise distribution links. A link is kept only when it has a usable
  * URL; a missing or unrecognised platform falls back to "other" rather than
@@ -186,7 +231,19 @@ function normalizeTopics(topics: ReadonlyArray<string | null> | null | undefined
 }
 
 function normalizeStartHereOrder(value: number | null | undefined): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+  // Only positive integers are meaningful for public Start Here ordering.
+  // Zero, negatives, and non-integers normalise to null (excluded).
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  if (!Number.isInteger(value) || value < 1) return null;
+  return value;
+}
+
+/** True when a work has a destination suitable for a public Start Here card. */
+export function hasUsablePublicDestination(
+  work: Pick<Work, "canonicalUrl" | "distributionLinks">
+): boolean {
+  if (work.canonicalUrl && isUsablePublicHref(work.canonicalUrl)) return true;
+  return work.distributionLinks.some((link) => isUsablePublicHref(link.url));
 }
 
 /**
@@ -280,19 +337,52 @@ export function selectArchiveWorks(works: readonly Work[]): Work[] {
 }
 
 /**
- * Start Here layer: listed items with a startHereOrder, ascending.
- * Archived and draft items are never included, even if they carry an order.
+ * Public Start Here eligibility — stricter than Explore listing.
+ *
+ * A work appears only when all of the following hold:
+ *   - status is `listed` (draft and archived are excluded)
+ *   - publicationState is `published` (developing / in-progress signposts are excluded)
+ *   - startHereOrder is a positive integer
+ *   - a usable public destination exists (canonicalUrl, or a distribution link)
+ *
+ * Setting startHereOrder alone is never enough. Social-media visitors must
+ * never be sent into incomplete or placeholder content.
  */
-export function selectStartHere(works: readonly Work[]): Work[] {
+export function isPublicStartHereEligible(work: Work): boolean {
+  return (
+    work.status === "listed" &&
+    work.publicationState === "published" &&
+    work.startHereOrder !== null &&
+    work.startHereOrder >= 1 &&
+    hasUsablePublicDestination(work)
+  );
+}
+
+/**
+ * Public Start Here sequence: eligible listed+published works with a
+ * positive startHereOrder, ascending. Deterministic when two works share
+ * an order (publishedDate/date descending, then slug ascending).
+ *
+ * This is the authoritative public selector. `selectStartHere` remains as a
+ * compatibility alias used by existing call sites and tests.
+ */
+export function selectPublicStartHereWorks(works: readonly Work[]): Work[] {
   return works
-    .filter((work) => work.status === "listed" && work.startHereOrder !== null)
+    .filter(isPublicStartHereEligible)
     .slice()
     .sort((a, b) => {
       const byOrder = (a.startHereOrder ?? 0) - (b.startHereOrder ?? 0);
       if (byOrder !== 0) return byOrder;
+      const aDate = a.publishedDate ?? a.date;
+      const bDate = b.publishedDate ?? b.date;
+      const byDate = bDate.localeCompare(aDate);
+      if (byDate !== 0) return byDate;
       return a.slug.localeCompare(b.slug);
     });
 }
+
+/** @deprecated Prefer `selectPublicStartHereWorks` for new call sites. */
+export const selectStartHere = selectPublicStartHereWorks;
 
 /** Featured layer: listed items eligible for prominent display. */
 export function selectFeaturedWorks(works: readonly Work[]): Work[] {
@@ -376,7 +466,7 @@ export async function getArchiveWorks(): Promise<Work[]> {
 }
 
 export async function getStartHereWorks(): Promise<Work[]> {
-  return selectStartHere(await readAllWorks());
+  return selectPublicStartHereWorks(await readAllWorks());
 }
 
 export async function getFeaturedWorks(): Promise<Work[]> {

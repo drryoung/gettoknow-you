@@ -6,6 +6,7 @@ export function SiteFooter({ note }: { note?: string }) {
         <p>A public commons for meaningful conversation and relationship.</p>
       </div>
       <nav className="footer-nav" aria-label="Footer">
+        <a href="/start-here">Start Here</a>
         <a href="/explore">Explore</a>
         <a href="/read">Read</a>
         <a href="/try">Try</a>

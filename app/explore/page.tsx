@@ -44,6 +44,7 @@ function countByCollection(works: readonly Work[], slug: string): number {
 
 export default async function ExplorePage() {
   const [startHere, listedWorks] = await Promise.all([getStartHereWorks(), getListedWorks()]);
+  const startHerePreview = startHere.slice(0, 3);
 
   return (
     <main>
@@ -71,20 +72,24 @@ export default async function ExplorePage() {
         </ul>
       </section>
 
-      <section className="screen shell explore-start-here" aria-labelledby="start-here-title">
-        <p className="eyebrow">Start Here</p>
-        <h2 id="start-here-title" className="explore-section-title">
-          A place to begin
-        </h2>
-        <p className="section-lede">
-          If you are new to GetToKnow.You, this small sequence is the fastest way to understand
-          what we are building and why.
-        </p>
-        <WorkList
-          works={startHere}
-          emptyMessage="The curated Start Here sequence is still being assembled."
-        />
-      </section>
+      {startHerePreview.length > 0 ? (
+        <section className="screen shell explore-start-here" aria-labelledby="start-here-title">
+          <p className="eyebrow">Start Here</p>
+          <h2 id="start-here-title" className="explore-section-title">
+            A place to begin
+          </h2>
+          <p className="section-lede">
+            If you are new to GetToKnow.You, start with this short sequence—then open the full Start
+            Here page when you want the complete path.
+          </p>
+          <WorkList works={startHerePreview} emptyMessage="" primaryLabel="Open" />
+          <p className="section-link">
+            <a className="action-link" href="/start-here">
+              New here? Start here.
+            </a>
+          </p>
+        </section>
+      ) : null}
 
       <section className="screen shell explore-collections" aria-labelledby="collections-title">
         <p className="eyebrow">Collections</p>

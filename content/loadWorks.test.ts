@@ -1,36 +1,36 @@
-import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync } from "fs";
-import path from "path";
 import {
   getArchiveWorks,
   getListedWorks,
+  getStartHereWorks,
+  hasUsablePublicDestination,
+  isPublicStartHereEligible,
+  isUsablePublicHref,
   normalizeWork,
   selectArchiveWorks,
   selectByCollection,
   selectFeaturedWorks,
   selectListedWorks,
+  selectPublicStartHereWorks,
   selectRelatedWorks,
   selectStartHere,
   type Work,
 } from "./loadWorks";
 import { COLLECTIONS, isCollectionSlug } from "./collections";
-
+import { readFileSync, existsSync } from "fs";
+import path from "path";
+import { describe, expect, it } from "vitest";
 const root = process.cwd();
 
 function work(
   partial: Partial<Work> & Pick<Work, "slug" | "title" | "date" | "status" | "publicationState">
 ): Work {
-  const canonicalUrl =
-    partial.canonicalUrl !== undefined
-      ? partial.canonicalUrl
-      : partial.publicationState === "developing"
-        ? null
-        : "https://example.com/work";
+  const defaultCanonical =
+    partial.publicationState === "developing" ? null : "https://www.instagram.com/p/fixture-work";
+  const canonicalUrl = partial.canonicalUrl !== undefined ? partial.canonicalUrl : defaultCanonical;
   return {
     summary: "Summary",
     type: "essay",
     publishedDate: null,
-    canonicalUrl,
     externalUrl: null,
     internalPath: null,
     distributionLinks: [],
@@ -44,6 +44,7 @@ function work(
     origin: null,
     canonicalPlatform: null,
     ...partial,
+    canonicalUrl,
   };
 }
 
@@ -225,6 +226,23 @@ describe("normalizeWork", () => {
     expect(result?.featured).toBe(true);
     expect(result?.startHereOrder).toBe(1);
   });
+
+  it("drops non-positive or non-integer startHereOrder values", () => {
+    for (const startHereOrder of [0, -1, 1.5, Number.NaN]) {
+      const result = normalizeWork({
+        slug: "bad-order",
+        title: "Bad Order",
+        summary: "Order must be a positive integer.",
+        type: "essay",
+        date: "2026-07-25",
+        publicationState: "published",
+        canonicalUrl: "https://example.com/work",
+        status: "listed",
+        startHereOrder,
+      });
+      expect(result?.startHereOrder).toBeNull();
+    }
+  });
 });
 
 describe("selectListedWorks", () => {
@@ -367,7 +385,23 @@ describe("selectArchiveWorks", () => {
   });
 });
 
-describe("selectStartHere", () => {
+describe("selectStartHere / selectPublicStartHereWorks", () => {
+  it("includes a listed published work with a valid order and usable destination", () => {
+    const eligible = work({
+      slug: "ready",
+      title: "Ready",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "published",
+      canonicalUrl: "https://www.instagram.com/p/ready",
+      startHereOrder: 1,
+    });
+    expect(isPublicStartHereEligible(eligible)).toBe(true);
+    expect(hasUsablePublicDestination(eligible)).toBe(true);
+    expect(selectStartHere([eligible]).map((w) => w.slug)).toEqual(["ready"]);
+    expect(selectPublicStartHereWorks([eligible]).map((w) => w.slug)).toEqual(["ready"]);
+  });
+
   it("respects ascending startHereOrder and excludes items without one", () => {
     const result = selectStartHere([
       work({ slug: "third", title: "Third", date: "2025-01-01", status: "listed", publicationState: "published", startHereOrder: 3 }),
@@ -378,12 +412,109 @@ describe("selectStartHere", () => {
     expect(result.map((w) => w.slug)).toEqual(["first", "second", "third"]);
   });
 
-  it("excludes archived and draft items even if they carry an order", () => {
+  it("excludes draft and archived works even if they carry an order", () => {
     const result = selectStartHere([
       work({ slug: "archived", title: "Archived", date: "2025-01-01", status: "archived", publicationState: "published", startHereOrder: 1 }),
-      work({ slug: "draft", title: "Draft", date: "2025-01-01", status: "draft", publicationState: "developing", startHereOrder: 2 }),
+      work({ slug: "draft", title: "Draft", date: "2025-01-01", status: "draft", publicationState: "published", startHereOrder: 2 }),
     ]);
     expect(result).toHaveLength(0);
+  });
+
+  it("excludes developing / in-development publicationState", () => {
+    const result = selectStartHere([
+      work({
+        slug: "developing",
+        title: "Developing",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "developing",
+        canonicalUrl: null,
+        startHereOrder: 1,
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("excludes a work without a usable public destination", () => {
+    const result = selectStartHere([
+      work({
+        slug: "no-destination",
+        title: "No Destination",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+        canonicalUrl: null,
+        distributionLinks: [],
+        startHereOrder: 1,
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("excludes placeholder, local, and malformed destinations", () => {
+    const cases = ["#", "TODO", "https://example.com/x", "http://localhost/x", "not-a-url", "/keystatic"];
+    for (const canonicalUrl of cases) {
+      expect(isUsablePublicHref(canonicalUrl)).toBe(false);
+      const result = selectPublicStartHereWorks([
+        work({
+          slug: "bad-dest",
+          title: "Bad Dest",
+          date: "2025-01-01",
+          status: "listed",
+          publicationState: "published",
+          canonicalUrl,
+          startHereOrder: 1,
+        }),
+      ]);
+      expect(result).toHaveLength(0);
+    }
+    expect(isUsablePublicHref("/charter")).toBe(true);
+    expect(isUsablePublicHref("https://www.instagram.com/p/example")).toBe(true);
+    expect(
+      hasUsablePublicDestination({
+        canonicalUrl: "https://example.com/nope",
+        distributionLinks: [{ platform: "instagram", label: null, url: "https://www.instagram.com/p/ok" }],
+      })
+    ).toBe(true);
+  });
+
+  it("excludes invalid or non-positive orders", () => {
+    const zero = work({
+      slug: "zero",
+      title: "Zero",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "published",
+      startHereOrder: null,
+    });
+    // Simulate a stale order that slipped past normalisation.
+    const negative = { ...zero, slug: "negative", startHereOrder: -3 };
+    expect(selectStartHere([zero, negative])).toHaveLength(0);
+  });
+
+  it("uses a deterministic secondary sort when two works share an order", () => {
+    const result = selectStartHere([
+      work({
+        slug: "zeta",
+        title: "Zeta",
+        date: "2025-01-01",
+        publishedDate: "2024-01-01",
+        status: "listed",
+        publicationState: "published",
+        startHereOrder: 1,
+      }),
+      work({
+        slug: "alpha",
+        title: "Alpha",
+        date: "2025-01-01",
+        publishedDate: "2025-06-01",
+        status: "listed",
+        publicationState: "published",
+        startHereOrder: 1,
+      }),
+    ]);
+    // Newer publishedDate first, then slug.
+    expect(result.map((w) => w.slug)).toEqual(["alpha", "zeta"]);
   });
 });
 
@@ -485,7 +616,6 @@ describe("getListedWorks", () => {
   it("never returns a draft seed item", async () => {
     const works = await getListedWorks();
     const bySlug = Object.fromEntries(works.map((w) => [w.slug, w]));
-    expect(bySlug["the-dunedin-checkout-success-story"]).toBeUndefined();
     expect(bySlug["the-second-question"]).toBeUndefined();
   });
 
@@ -496,14 +626,21 @@ describe("getListedWorks", () => {
     expect(bySlug.mandarinos?.canonicalPlatform).toBeNull();
   });
 
-  it("keeps the teenage-story record as a single, non-duplicated listed entry", async () => {
-    const works = await getListedWorks();
-    const matches = works.filter((w) => w.slug === "the-teenager-who-got-stuck");
-    expect(matches).toHaveLength(1);
-    expect(matches[0]?.series).toBe("Conversations I Wish I'd Had");
-    expect(matches[0]?.topics).toEqual(
-      expect.arrayContaining(["stories", "conversation", "relationships"])
-    );
+  it("keeps the published teenage founder story as a single Start Here entry", async () => {
+    const listed = await getListedWorks();
+    const startHere = await getStartHereWorks();
+    const listedMatches = listed.filter((w) => w.slug === "conversation-missed-opportunity");
+    const startHereMatches = startHere.filter((w) => w.slug === "conversation-missed-opportunity");
+    const legacyMatches = listed.filter((w) => w.slug === "the-teenager-who-got-stuck");
+
+    expect(listedMatches).toHaveLength(1);
+    expect(startHereMatches).toHaveLength(1);
+    expect(legacyMatches).toHaveLength(0);
+    expect(startHereMatches[0]?.startHereOrder).toBe(1);
+    expect(startHereMatches[0]?.publicationState).toBe("published");
+    expect(startHereMatches[0]?.canonicalUrl).toMatch(/^https:\/\//);
+    expect(startHere.every((w) => w.publicationState === "published")).toBe(true);
+    expect(startHere.every((w) => w.canonicalUrl)).toBe(true);
   });
 });
 
@@ -614,12 +751,38 @@ describe("getArchiveWorks", () => {
 });
 
 describe("getStartHereWorks", () => {
-  it("returns items in ascending startHereOrder", async () => {
-    const { getStartHereWorks } = await import("./loadWorks");
+  it("returns only public-ready items in ascending startHereOrder", async () => {
     const works = await getStartHereWorks();
+    expect(works.length).toBeGreaterThan(0);
+    expect(works.every((w) => w.status === "listed")).toBe(true);
+    expect(works.every((w) => w.publicationState === "published")).toBe(true);
+    expect(works.every((w) => typeof w.startHereOrder === "number" && w.startHereOrder! >= 1)).toBe(
+      true
+    );
+    expect(works.every((w) => Boolean(w.canonicalUrl))).toBe(true);
     const orders = works.map((w) => w.startHereOrder);
-    expect(orders.every((order) => order !== null)).toBe(true);
     expect([...orders]).toEqual([...orders].sort((a, b) => (a ?? 0) - (b ?? 0)));
+  });
+
+  it("never includes known developing or XHS-only Start Here candidates", async () => {
+    const works = await getStartHereWorks();
+    const slugs = new Set(works.map((w) => w.slug));
+    expect(slugs.has("conversationos")).toBe(false);
+    expect(slugs.has("better-conversations")).toBe(false);
+    expect(slugs.has("trust-and-human-connection")).toBe(false);
+    // Xiaohongshu-only destinations are kept in the library but not in the
+    // universal social-profile Start Here pathway.
+    expect(slugs.has("the-dunedin-checkout-success-story")).toBe(false);
+  });
+
+  it("orders the public Start Here sequence as founder story, charter, then MandarinOS", async () => {
+    const works = await getStartHereWorks();
+    expect(works.map((w) => w.slug)).toEqual([
+      "conversation-missed-opportunity",
+      "gettoknowyou-community-charter",
+      "mandarinos",
+    ]);
+    expect(works[0]?.title).toBe("Conversation — Missed Opportunity");
   });
 });
 
@@ -661,6 +824,10 @@ describe("works collection boundaries", () => {
     const list = readFileSync(path.join(root, "app/components/WorkList.tsx"), "utf8");
     expect(page).toContain("getListedWorks");
     expect(page).toContain("getStartHereWorks");
+    expect(page).toContain('href="/start-here"');
+    expect(page).toContain("slice(0, 3)");
+    expect(page).toContain("New here? Start here.");
+    expect(page).not.toContain("View Start Here");
     expect(page).toContain("WorkList");
     expect(list).toContain("work.title");
     expect(list).toContain("work.summary");
@@ -668,6 +835,19 @@ describe("works collection boundaries", () => {
     expect(page).not.toContain("canonicalUrl: \"http");
     expect(page).not.toContain("summary: \"");
     expect(page).not.toContain("MandarinOS is the first practical");
+  });
+
+  it("exposes a dedicated /start-here route that uses the same public Start Here selector", () => {
+    const page = readFileSync(path.join(root, "app/start-here/page.tsx"), "utf8");
+    const explore = readFileSync(path.join(root, "app/explore/page.tsx"), "utf8");
+    expect(existsSync(path.join(root, "app/start-here/page.tsx"))).toBe(true);
+    expect(page).toContain("getStartHereWorks");
+    expect(page).toContain("WorkList");
+    expect(page).toContain("Start Here");
+    expect(page).not.toContain("In development");
+    expect(page).not.toContain("coming soon");
+    expect(explore).toContain("getStartHereWorks");
+    expect(explore).toContain('href="/start-here"');
   });
 
   it("does not render a developing entry as an empty canonical link in the page source", () => {

@@ -105,7 +105,7 @@ Conversation, Relationships, Emotional Intelligence, Workplace, China, and
 Language Learning. Extend it by adding one entry — no schema or route
 rewrite is required.
 
-* **Start Here** (`getStartHereWorks`) — listed items with a `startHereOrder`, ascending.
+* **Start Here** (`getStartHereWorks` / `selectPublicStartHereWorks`, routed at `/start-here`) — listed **and** published items with a positive `startHereOrder` and a usable destination, ascending. Developing works are never included. `/explore` shows a three-item preview of the same sequence.
 * **Collections** (`getCollectionWorks(slug)`, routed at `/explore/[collection]`) — listed items whose `topics` include the collection slug. Unknown slugs 404 via the standard Next.js not-found behaviour.
 * **Archive** (`getArchiveWorks`, routed at `/explore/archive`) — every non-draft item (listed or archived), reverse-chronological by `publishedDate` (falling back to `date`), deterministic via a slug tie-break.
 * **Related content** (`getRelatedWorks`) — a small, non-ranked set of other listed items sharing the same `series`, then the same `topics`. A pure data-layer foundation; no per-item route currently exists to render a "Continue exploring" block (see §11).
@@ -134,7 +134,8 @@ Announcements, reminders, comments, minor variants, and temporary updates normal
 | Route | Responsibility |
 |---|---|
 | `/` | Welcoming homepage; pathways; featured works preview; founder preview; Charter note |
-| `/explore` | Gateway overview: Start Here sequence, Collections grid, and a link into the Archive |
+| `/start-here` | Canonical public introductory sequence for first-time / social-media visitors |
+| `/explore` | Gateway overview: Start Here preview, Collections grid, and a link into the Archive |
 | `/explore/[collection]` | One reusable template rendering any collection from `content/collections.ts`; unknown slugs 404 |
 | `/explore/archive` | Complete reverse-chronological index of non-draft works |
 | `/read` | Editorial list of reading-oriented works |

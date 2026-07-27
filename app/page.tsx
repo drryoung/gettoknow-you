@@ -85,15 +85,11 @@ export default async function Home() {
             matter.
           </p>
           <p className="welcome-hero__actions">
-            <a className="action-link action-link--primary" href="/explore">
-              Explore GetToKnow.You
+            <a className="action-link action-link--primary" href="/start-here">
+              Start Here
             </a>
-            <a
-              className="action-link"
-              href="https://www.mandarinos.app/"
-              rel="noopener noreferrer"
-            >
-              Try MandarinOS
+            <a className="action-link" href="/explore">
+              Explore GetToKnow.You
             </a>
           </p>
         </div>

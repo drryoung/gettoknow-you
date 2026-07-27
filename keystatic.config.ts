@@ -168,7 +168,7 @@ export default config({
         startHereOrder: fields.integer({
           label: "Start Here order",
           description:
-            "Leave blank if this item should not appear in Start Here. Otherwise set a number — lower numbers appear earlier. Draft and Archived records are still excluded from Start Here even if a number is set here.",
+            "Leave blank to exclude from /start-here. Use a unique positive number (lower appears earlier). Inclusion also requires Listed status, Published maturity, and a working Canonical URL — order alone is never enough. Developing, draft, and archived works never appear.",
         }),
 
         // — Media — what visitors see and how long it takes.
