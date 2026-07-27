@@ -66,6 +66,19 @@ describe("Keystatic local safety", () => {
     expect(api).toMatch(/status:\s*404/);
   });
 
+  it("keeps the Keystatic catch-all page slot mounted for pushState navigations", () => {
+    const layout = readFileSync(path.join(root, "app/keystatic/layout.tsx"), "utf8");
+    const page = readFileSync(
+      path.join(root, "app/keystatic/[[...params]]/page.tsx"),
+      "utf8"
+    );
+    // Layout must render children so Next can restore [[...params]] after
+    // Keystatic create/save history.pushState calls.
+    expect(layout).toMatch(/\{\s*children\s*\}/);
+    expect(layout).toContain("KeystaticApp");
+    expect(page).toContain("await params");
+  });
+
   it("returns 404 from the Keystatic API when NODE_ENV is production", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.resetModules();
