@@ -1,4 +1,5 @@
 import type { Work, WorkType } from "../../content/loadWorks";
+import { platformLabel } from "../../content/platforms";
 
 const TYPE_LABELS: Record<WorkType, string> = {
   essay: "Essay",
@@ -74,8 +75,8 @@ export function WorkItem({
           <span className="explore-list__developing">In development</span>
         )}
         {work.distributionLinks.map((link) => (
-          <a key={`${link.label}-${link.url}`} href={link.url} rel="noopener noreferrer">
-            {link.label}
+          <a key={`${link.platform}-${link.url}`} href={link.url} rel="noopener noreferrer">
+            {link.label || platformLabel(link.platform)}
           </a>
         ))}
       </p>

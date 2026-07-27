@@ -4,6 +4,11 @@
  */
 import { config, fields, singleton, collection } from "@keystatic/core";
 import { COLLECTIONS } from "./content/collections";
+import {
+  CANONICAL_PLATFORM_OPTIONS,
+  DISTRIBUTION_PLATFORM_OPTIONS,
+  ORIGIN_OPTIONS,
+} from "./content/platforms";
 
 export default config({
   storage: { kind: "local" },
@@ -75,6 +80,7 @@ export default config({
       entryLayout: "form",
       columns: ["type", "publicationState", "status", "featured"],
       schema: {
+        // — Identity — what the item is.
         title: fields.slug({
           name: {
             label: "Title",
@@ -102,6 +108,44 @@ export default config({
           ],
           defaultValue: "essay",
         }),
+
+        // — Editorial organisation — where it fits in the library.
+        topics: fields.multiselect({
+          label: "Topics (collections)",
+          description:
+            "Which thematic collections should surface this item. An item may belong to several collections without being duplicated.",
+          options: COLLECTIONS.map((c) => ({ label: c.name, value: c.slug })),
+          defaultValue: [],
+        }),
+        series: fields.text({
+          label: "Series",
+          description:
+            'Optional. For example "Conversations I Wish I\u2019d Had". Leave blank if not part of a series.',
+          validation: { length: { max: 120 } },
+        }),
+
+        // — Publication — is it finished, and is it visible to visitors?
+        status: fields.select({
+          label: "Website visibility (status)",
+          options: [
+            { label: "Draft — not publicly visible", value: "draft" },
+            { label: "Listed — publicly visible", value: "listed" },
+            { label: "Archived — kept in the archive only", value: "archived" },
+          ],
+          defaultValue: "listed",
+          description:
+            "Controls where this record can appear on the site. Draft: never shown publicly, anywhere. Listed: appears on /explore, Start Here, collections, and the archive. Archived: stays visible only in the complete archive (hidden from Start Here and collections). Changing a work from Draft to Listed makes it eligible for public display, subject to the rules above — it does not bypass them (for example a Listed item still needs a real destination before it shows a working link).",
+        }),
+        publicationState: fields.select({
+          label: "Editorial maturity (publication state)",
+          options: [
+            { label: "Published", value: "published" },
+            { label: "Developing", value: "developing" },
+          ],
+          defaultValue: "developing",
+          description:
+            "A separate concept from website visibility above. Published: a finished piece with a verified canonical URL. Developing: an honest signpost for something still taking shape, shown with an \u201cIn development\u201d label and no link. A work can be Listed and Developing at the same time — visible on the site as a transparent work-in-progress.",
+        }),
         date: fields.date({
           label: "Added date",
           description:
@@ -113,15 +157,52 @@ export default config({
           description:
             "The actual publication date, if known. Leave blank if unknown — do not guess.",
         }),
-        publicationState: fields.select({
-          label: "Publication state",
-          options: [
-            { label: "Published", value: "published" },
-            { label: "Developing", value: "developing" },
-          ],
-          defaultValue: "developing",
+
+        // — Curation — prominence and the Start Here sequence.
+        featured: fields.checkbox({
+          label: "Featured",
           description:
-            "Published works need a canonical URL. Developing works are honest signposts and may omit the URL.",
+            "Marks this item as eligible for prominent future placement (for example a homepage or Start Here highlight). Featured alone does not place it in Start Here — set Start Here order for that.",
+          defaultValue: false,
+        }),
+        startHereOrder: fields.integer({
+          label: "Start Here order",
+          description:
+            "Leave blank if this item should not appear in Start Here. Otherwise set a number — lower numbers appear earlier. Draft and Archived records are still excluded from Start Here even if a number is set here.",
+        }),
+
+        // — Media — what visitors see and how long it takes.
+        thumbnail: fields.text({
+          label: "Thumbnail",
+          description:
+            "Optional image path or URL to represent this item visually. Leave blank if unknown — missing thumbnails render safely.",
+          validation: { length: { max: 500 } },
+        }),
+        watchTime: fields.text({
+          label: "Watch time",
+          description: 'Optional, human-readable. For example "4 min" or "90 sec". Leave blank if unknown.',
+          validation: { length: { max: 20 } },
+        }),
+        readTime: fields.text({
+          label: "Read time",
+          description: 'Optional, human-readable. For example "6 min read". Leave blank if unknown.',
+          validation: { length: { max: 20 } },
+        }),
+
+        // — Provenance — where it came from and where the authoritative copy lives.
+        origin: fields.select({
+          label: "Origin",
+          options: [{ label: "Not specified", value: "" }, ...ORIGIN_OPTIONS],
+          defaultValue: "",
+          description:
+            "Optional. Where this item was first published or created, before any later distribution. Recorded for history and future filtering only — it does not affect routing or the canonical URL.",
+        }),
+        canonicalPlatform: fields.select({
+          label: "Canonical platform",
+          options: [{ label: "Not specified", value: "" }, ...CANONICAL_PLATFORM_OPTIONS],
+          defaultValue: "",
+          description:
+            "Select the platform hosting the authoritative version of this work. The actual destination remains the Canonical URL field below — this only records which platform that URL points to.",
         }),
         canonicalUrl: fields.text({
           label: "Canonical URL",
@@ -129,12 +210,20 @@ export default config({
             "Required for published works. Use an absolute https URL, or a site path such as /charter. Leave blank for developing works. Do not invent URLs.",
           validation: { length: { max: 500 } },
         }),
+
+        // — Distribution — every platform adaptation of this one work.
         distributionLinks: fields.array(
           fields.object({
+            platform: fields.select({
+              label: "Platform",
+              options: DISTRIBUTION_PLATFORM_OPTIONS,
+              defaultValue: "other",
+            }),
             label: fields.text({
-              label: "Label",
-              description: 'For example "Xiaohongshu" or "Instagram".',
-              validation: { isRequired: true, length: { min: 1, max: 60 } },
+              label: "Note (optional)",
+              description:
+                'Optional extra note, for example "Reel" or "Post 2", if the platform alone is not specific enough.',
+              validation: { length: { max: 60 } },
             }),
             url: fields.url({
               label: "URL",
@@ -142,60 +231,16 @@ export default config({
             }),
           }),
           {
-            label: "Distribution links / platforms",
+            label: "Distribution links",
             description:
-              "Optional social or platform adaptations of this canonical work (for example Xiaohongshu or YouTube). Not separate entries.",
-            itemLabel: (props) => props.fields.label.value || "Distribution link",
+              "Every platform adaptation of this one canonical work — for example both an Instagram post and a Xiaohongshu post for the same video. Not separate library entries. Add one row per link; leave a link out entirely until its real URL exists rather than adding a placeholder.",
+            itemLabel: (props) =>
+              props.fields.label.value ||
+              DISTRIBUTION_PLATFORM_OPTIONS.find((o) => o.value === props.fields.platform.value)
+                ?.label ||
+              "Distribution link",
           }
         ),
-        topics: fields.multiselect({
-          label: "Topics (collections)",
-          description:
-            "Which thematic collections should surface this item. An item may belong to several collections without being duplicated.",
-          options: COLLECTIONS.map((c) => ({ label: c.name, value: c.slug })),
-          defaultValue: [],
-        }),
-        series: fields.text({
-          label: "Series",
-          description: 'Optional. For example "Conversations I Wish I\u2019d Had". Leave blank if not part of a series.',
-          validation: { length: { max: 120 } },
-        }),
-        watchTime: fields.text({
-          label: "Watch time",
-          description: 'Optional. For example "4 min". Leave blank if unknown.',
-          validation: { length: { max: 20 } },
-        }),
-        readTime: fields.text({
-          label: "Read time",
-          description: 'Optional. For example "3 min read". Leave blank if unknown.',
-          validation: { length: { max: 20 } },
-        }),
-        thumbnail: fields.text({
-          label: "Thumbnail",
-          description: "Optional image path or URL. Leave blank if unknown.",
-          validation: { length: { max: 500 } },
-        }),
-        featured: fields.checkbox({
-          label: "Featured",
-          description: "Eligible for prominent display (for example homepage or Start Here highlights).",
-          defaultValue: false,
-        }),
-        startHereOrder: fields.integer({
-          label: "Start Here order",
-          description:
-            "Optional. Set a number to include this item in the curated Start Here sequence, lowest first. Leave blank to exclude it.",
-        }),
-        status: fields.select({
-          label: "Status",
-          options: [
-            { label: "Draft", value: "draft" },
-            { label: "Listed", value: "listed" },
-            { label: "Archived", value: "archived" },
-          ],
-          defaultValue: "listed",
-          description:
-            "Draft items never appear publicly. Listed works appear on /explore and its collections. Archived works stay in the archive but are hidden from Start Here and collections.",
-        }),
       },
     }),
   },

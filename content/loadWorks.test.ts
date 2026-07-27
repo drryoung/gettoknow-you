@@ -41,6 +41,8 @@ function work(
     thumbnail: null,
     featured: false,
     startHereOrder: null,
+    origin: null,
+    canonicalPlatform: null,
     ...partial,
   };
 }
@@ -336,7 +338,7 @@ describe("selectListedWorks", () => {
       date: "2025-02-01",
       status: "listed",
       publicationState: "published",
-      distributionLinks: [{ label: "Instagram", url: "https://example.com/ig" }],
+      distributionLinks: [{ platform: "instagram", label: null, url: "https://example.com/ig" }],
     });
     const result = selectListedWorks([withoutLinks, withLinks]);
     expect(result.find((w) => w.slug === "plain")?.distributionLinks).toEqual([]);
@@ -486,6 +488,118 @@ describe("getListedWorks", () => {
     expect(bySlug["the-dunedin-checkout-success-story"]).toBeUndefined();
     expect(bySlug["the-second-question"]).toBeUndefined();
   });
+
+  it("loads existing records that predate origin and canonicalPlatform safely", async () => {
+    const works = await getListedWorks();
+    const bySlug = Object.fromEntries(works.map((w) => [w.slug, w]));
+    expect(bySlug.mandarinos?.origin).toBeNull();
+    expect(bySlug.mandarinos?.canonicalPlatform).toBeNull();
+  });
+
+  it("keeps the teenage-story record as a single, non-duplicated listed entry", async () => {
+    const works = await getListedWorks();
+    const matches = works.filter((w) => w.slug === "the-teenager-who-got-stuck");
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.series).toBe("Conversations I Wish I'd Had");
+    expect(matches[0]?.topics).toEqual(
+      expect.arrayContaining(["stories", "conversation", "relationships"])
+    );
+  });
+});
+
+describe("distribution platforms and provenance", () => {
+  it("normalizes missing platform to 'other' rather than dropping the link", () => {
+    const result = normalizeWork({
+      slug: "legacy-link",
+      title: "Legacy Link",
+      summary: "A link recorded before the platform field existed.",
+      type: "video",
+      date: "2026-07-25",
+      publicationState: "developing",
+      canonicalUrl: "",
+      status: "listed",
+      distributionLinks: [{ label: "Instagram", url: "https://instagram.com/p/example" }],
+    });
+    expect(result?.distributionLinks).toEqual([
+      { platform: "other", label: "Instagram", url: "https://instagram.com/p/example" },
+    ]);
+  });
+
+  it("drops a malformed distribution link (no URL) without failing the whole record", () => {
+    const result = normalizeWork({
+      slug: "malformed-link",
+      title: "Malformed Link",
+      summary: "Has one good link and one without a URL.",
+      type: "video",
+      date: "2026-07-25",
+      publicationState: "developing",
+      canonicalUrl: "",
+      status: "listed",
+      distributionLinks: [
+        { platform: "youtube", url: "https://youtube.com/watch?v=example" },
+        { platform: "instagram", url: "" },
+      ],
+    });
+    expect(result?.distributionLinks).toEqual([
+      { platform: "youtube", label: null, url: "https://youtube.com/watch?v=example" },
+    ]);
+  });
+
+  it("supports both Instagram and Xiaohongshu links on the same work", () => {
+    const result = normalizeWork({
+      slug: "multi-platform",
+      title: "Multi Platform",
+      summary: "Published on two platforms.",
+      type: "video",
+      date: "2026-07-25",
+      publicationState: "developing",
+      canonicalUrl: "",
+      status: "listed",
+      distributionLinks: [
+        { platform: "instagram", url: "https://instagram.com/p/one" },
+        { platform: "xiaohongshu", url: "https://xiaohongshu.com/p/two" },
+      ],
+    });
+    expect(result?.distributionLinks).toHaveLength(2);
+    expect(result?.distributionLinks.map((l) => l.platform).sort()).toEqual([
+      "instagram",
+      "xiaohongshu",
+    ]);
+  });
+
+  it("normalizes an unrecognised or blank origin/canonicalPlatform to null", () => {
+    const result = normalizeWork({
+      slug: "unknown-provenance",
+      title: "Unknown Provenance",
+      summary: "Bad or blank provenance values.",
+      type: "essay",
+      date: "2026-07-25",
+      publicationState: "developing",
+      canonicalUrl: "",
+      status: "listed",
+      origin: "not-a-real-origin",
+      canonicalPlatform: "",
+    });
+    expect(result?.origin).toBeNull();
+    expect(result?.canonicalPlatform).toBeNull();
+  });
+
+  it("keeps a recognised origin and canonicalPlatform", () => {
+    const result = normalizeWork({
+      slug: "known-provenance",
+      title: "Known Provenance",
+      summary: "Good provenance values.",
+      type: "video",
+      date: "2026-07-25",
+      publicationState: "published",
+      canonicalUrl: "https://youtube.com/watch?v=example",
+      status: "listed",
+      origin: "instagram",
+      canonicalPlatform: "youtube",
+    });
+    expect(result?.origin).toBe("instagram");
+    expect(result?.canonicalPlatform).toBe("youtube");
+  });
 });
 
 describe("getArchiveWorks", () => {
@@ -518,6 +632,28 @@ describe("works collection boundaries", () => {
     expect(config).toContain("works: collection(");
     expect(config).toContain("publicationState");
     expect(config).toContain('path: "content/community-charter"');
+  });
+
+  it("exposes a single platform taxonomy shared by distributionLinks, canonicalPlatform, and origin", () => {
+    const config = readFileSync(path.join(root, "keystatic.config.ts"), "utf8");
+    expect(config).toContain("DISTRIBUTION_PLATFORM_OPTIONS");
+    expect(config).toContain("CANONICAL_PLATFORM_OPTIONS");
+    expect(config).toContain("ORIGIN_OPTIONS");
+    // The taxonomy itself must live in one shared module, not be re-declared here.
+    expect(config).not.toContain('"xiaohongshu"');
+    const platforms = readFileSync(path.join(root, "content/platforms.ts"), "utf8");
+    expect(platforms).toContain('"instagram"');
+    expect(platforms).toContain('"xiaohongshu"');
+  });
+
+  it("keeps distributionLinks URL required while platform and note stay flexible", () => {
+    const config = readFileSync(path.join(root, "keystatic.config.ts"), "utf8");
+    const distributionSection = config.slice(config.indexOf("distributionLinks: fields.array("));
+    expect(distributionSection).toContain("platform: fields.select(");
+    expect(distributionSection).toContain('label: "Note (optional)"');
+    expect(distributionSection.slice(0, distributionSection.indexOf("url: fields.url("))).not.toContain(
+      "isRequired: true"
+    );
   });
 
   it("loads Explore content through the works loader without hard-coded work copy", () => {

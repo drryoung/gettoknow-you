@@ -28,6 +28,8 @@ function stubWork(slug: string): Work {
     thumbnail: null,
     featured: false,
     startHereOrder: null,
+    origin: null,
+    canonicalPlatform: null,
   };
 }
 

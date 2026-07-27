@@ -18,6 +18,14 @@ import { createReader } from "@keystatic/core/reader";
 import path from "path";
 import keystaticConfig from "../keystatic.config";
 import { isCollectionSlug } from "./collections";
+import {
+  isCanonicalPlatform,
+  isDistributionPlatform,
+  isOrigin,
+  type CanonicalPlatform,
+  type DistributionPlatform,
+  type Origin,
+} from "./platforms";
 
 const reader = createReader(path.join(process.cwd()), keystaticConfig);
 
@@ -45,7 +53,9 @@ export type WorkStatus = "draft" | "listed" | "archived";
 export type PublicationState = "published" | "developing";
 
 export type DistributionLink = {
-  label: string;
+  platform: DistributionPlatform;
+  /** Optional extra note (for example "Reel" or "Post 2"). Null if not set. */
+  label: string | null;
   url: string;
 };
 
@@ -78,6 +88,10 @@ export type Work = {
   featured: boolean;
   /** Position in the curated Start Here sequence, ascending. Null = not included. */
   startHereOrder: number | null;
+  /** Where this item was first published, when known. Editorial record only. */
+  origin: Origin | null;
+  /** Which platform hosts the authoritative canonicalUrl, when known. */
+  canonicalPlatform: CanonicalPlatform | null;
 };
 
 /** Raw entry shape used by normalizeWork (Keystatic reader or fixtures). */
@@ -90,7 +104,11 @@ export type WorkEntryInput = {
   publishedDate?: string | null;
   publicationState?: string | null;
   canonicalUrl?: string | null;
-  distributionLinks?: ReadonlyArray<{ label: string | null; url: string | null }> | null;
+  distributionLinks?: ReadonlyArray<{
+    platform?: string | null;
+    label?: string | null;
+    url?: string | null;
+  }> | null;
   status?: string | null;
   topics?: ReadonlyArray<string | null> | null;
   series?: string | null;
@@ -99,6 +117,8 @@ export type WorkEntryInput = {
   thumbnail?: string | null;
   featured?: boolean | null;
   startHereOrder?: number | null;
+  origin?: string | null;
+  canonicalPlatform?: string | null;
 };
 
 function isWorkType(value: string): value is WorkType {
@@ -117,17 +137,41 @@ function isExternalHref(href: string): boolean {
   return /^https?:\/\//i.test(href);
 }
 
+/**
+ * Normalise distribution links. A link is kept only when it has a usable
+ * URL; a missing or unrecognised platform falls back to "other" rather than
+ * discarding an otherwise-valid link. The optional label is a free-text note
+ * on top of the platform, not a replacement for it.
+ */
 function normalizeDistributionLinks(
-  links: ReadonlyArray<{ label: string | null; url: string | null }> | null | undefined
+  links:
+    | ReadonlyArray<{ platform?: string | null; label?: string | null; url?: string | null }>
+    | null
+    | undefined
 ): DistributionLink[] {
   if (!links?.length) return [];
   const out: DistributionLink[] = [];
   for (const link of links) {
-    const label = link.label?.trim();
     const url = link.url?.trim();
-    if (label && url) out.push({ label, url });
+    if (!url) continue;
+    const platformRaw = link.platform?.trim() ?? "";
+    const platform: DistributionPlatform = isDistributionPlatform(platformRaw)
+      ? platformRaw
+      : "other";
+    const label = link.label?.trim() || null;
+    out.push({ platform, label, url });
   }
   return out;
+}
+
+function normalizeOrigin(value: string | null | undefined): Origin | null {
+  const trimmed = value?.trim();
+  return trimmed && isOrigin(trimmed) ? trimmed : null;
+}
+
+function normalizeCanonicalPlatform(value: string | null | undefined): CanonicalPlatform | null {
+  const trimmed = value?.trim();
+  return trimmed && isCanonicalPlatform(trimmed) ? trimmed : null;
 }
 
 /** Keep only recognised collection slugs; unknown values are dropped silently. */
@@ -197,6 +241,8 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
     thumbnail: input.thumbnail?.trim() || null,
     featured: input.featured === true,
     startHereOrder: normalizeStartHereOrder(input.startHereOrder),
+    origin: normalizeOrigin(input.origin),
+    canonicalPlatform: normalizeCanonicalPlatform(input.canonicalPlatform),
   };
 }
 
@@ -312,6 +358,8 @@ async function readAllWorks(): Promise<Work[]> {
       thumbnail: entry.thumbnail,
       featured: entry.featured,
       startHereOrder: entry.startHereOrder,
+      origin: entry.origin,
+      canonicalPlatform: entry.canonicalPlatform,
     });
     if (work) works.push(work);
   }

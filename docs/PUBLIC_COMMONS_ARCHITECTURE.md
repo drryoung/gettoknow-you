@@ -91,6 +91,13 @@ below are derived views over that one source of truth.
 | `startHereOrder` | Position in the curated Start Here sequence (ascending). Absent = not included. |
 | `thumbnail` | Optional image path/URL. |
 | `status: draft` | Never shown publicly, anywhere (a third value alongside `listed` and `archived`). |
+| `origin` | Optional. Where the item was first published (editorial record only; does not affect routing). |
+| `canonicalPlatform` | Optional. Which platform hosts the authoritative `canonicalUrl` (records provenance; does not change the destination). |
+| `distributionLinks[].platform` | Machine-readable platform per link (Instagram, Xiaohongshu, YouTube, Substack, LinkedIn, Facebook, TikTok, Website, Podcast, Other), from `content/platforms.ts`. A missing/unrecognised value normalises to `other` rather than dropping the link. |
+
+`origin`, `canonicalPlatform`, and `distributionLinks[].platform` are edited in Keystatic but not yet surfaced anywhere in the public UI beyond the existing distribution-link labels — they exist for editorial recording and future filtering (see `docs/CONTENT_GOVERNANCE.md`).
+
+No per-item detail page, body, or transcript architecture exists for works. This metadata pass records the content item and external/platform links only; it does not add a place to host long-form prose (see §11 for the one exception, the Community Charter, which is a separate content domain).
 
 Collection taxonomy (`content/collections.ts`) is the single source for
 collection slug, name, and description. It currently defines: Stories,
@@ -114,7 +121,7 @@ change; the item's `topics`/`series` already determine where it will appear.
 
 ## 7. Distribution adaptations
 
-Platform versions that promote or adapt a canonical work (Xiaohongshu, Instagram, Facebook, Substack excerpts, and similar) are normally **distribution links** on the work record—not separate commons entries and not separate routes.
+Platform versions that promote or adapt a canonical work (Xiaohongshu, Instagram, Facebook, Substack excerpts, and similar) are normally **distribution links** on the work record—not separate commons entries and not separate routes. A single work record can carry several platform links at once (for example both an Instagram and a Xiaohongshu link for the same video); the platform versions remain distribution channels, and the work record remains the single source of truth.
 
 Future Substack essays may use an external canonical URL when a verified publication exists. Developing content may omit a URL.
 
