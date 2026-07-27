@@ -1,4 +1,5 @@
 import type { Work, WorkDetail } from "../../content/loadWorks";
+import type { Theme } from "../../content/loadThemes";
 import { COLLECTIONS } from "../../content/collections";
 import { libraryProjectLabel, libraryTypeLabel } from "./LibraryGrid";
 
@@ -13,9 +14,15 @@ function formatDate(isoDate: string): string {
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
-export function LibraryMetadata({ work }: { work: WorkDetail | Work }) {
+export function LibraryMetadata({
+  work,
+  themes = [],
+}: {
+  work: WorkDetail | Work;
+  themes?: Theme[];
+}) {
   const displayDate = work.publishedDate ?? work.date;
-  const themeNames = work.topics
+  const collectionNames = work.topics
     .map((slug) => COLLECTIONS.find((c) => c.slug === slug)?.name)
     .filter(Boolean);
 
@@ -41,10 +48,23 @@ export function LibraryMetadata({ work }: { work: WorkDetail | Work }) {
           <dd>{work.languages.join(" · ")}</dd>
         </div>
       ) : null}
-      {themeNames.length > 0 ? (
+      {themes.length > 0 ? (
         <div>
           <dt>Themes</dt>
-          <dd>{themeNames.join(" · ")}</dd>
+          <dd>
+            {themes.map((theme, index) => (
+              <span key={theme.slug}>
+                {index > 0 ? " · " : null}
+                <a href={theme.themePath}>{theme.title}</a>
+              </span>
+            ))}
+          </dd>
+        </div>
+      ) : null}
+      {collectionNames.length > 0 ? (
+        <div>
+          <dt>Collections</dt>
+          <dd>{collectionNames.join(" · ")}</dd>
         </div>
       ) : null}
       {work.watchTime || work.readTime ? (

@@ -3,9 +3,11 @@ import {
   getListedWorks,
   selectBrowsableCollections,
 } from "../../content/loadWorks";
+import { getNavThemes } from "../../content/loadThemes";
 import { COLLECTIONS } from "../../content/collections";
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
+import { ThemeGrid } from "../components/ThemeGrid";
 
 export const metadata: Metadata = {
   title: "Explore",
@@ -14,6 +16,11 @@ export const metadata: Metadata = {
 };
 
 const GATEWAYS = [
+  {
+    href: "/themes",
+    label: "Themes",
+    text: "Editorial rooms for conversation, culture, language, trust, and building the commons.",
+  },
   {
     href: "/library",
     label: "Library",
@@ -33,9 +40,12 @@ const GATEWAYS = [
 
 export default async function ExplorePage() {
   const listedWorks = await getListedWorks();
+  const navThemes = await getNavThemes();
   const browsable = selectBrowsableCollections(listedWorks);
   const browsableSlugs = new Set(browsable.map((collection) => collection.slug));
-  const futureThemes = COLLECTIONS.filter((collection) => !browsableSlugs.has(collection.slug));
+  const futureCollections = COLLECTIONS.filter(
+    (collection) => !browsableSlugs.has(collection.slug)
+  );
 
   return (
     <main>
@@ -68,11 +78,30 @@ export default async function ExplorePage() {
         </ul>
       </section>
 
+      {navThemes.length > 0 ? (
+        <section className="screen shell explore-themes" aria-labelledby="themes-title">
+          <p className="eyebrow">Themes</p>
+          <h2 id="themes-title" className="explore-section-title">
+            Rooms in the commons
+          </h2>
+          <p className="section-lede">
+            Each theme is an editorial room—some already gathering published work, others still
+            being framed.
+          </p>
+          <ThemeGrid themes={navThemes} />
+          <p className="section-link">
+            <a className="action-link" href="/themes">
+              Browse all themes
+            </a>
+          </p>
+        </section>
+      ) : null}
+
       {browsable.length > 0 ? (
         <section className="screen shell explore-collections" aria-labelledby="collections-title">
           <p className="eyebrow">Collections</p>
           <h2 id="collections-title" className="explore-section-title">
-            Browse by theme
+            Browse by collection
           </h2>
           <p className="section-lede">
             Each collection gathers published works around one thread—conversation, relationships,
@@ -99,10 +128,10 @@ export default async function ExplorePage() {
         </section>
       ) : null}
 
-      {futureThemes.length > 0 ? (
-        <section className="screen shell explore-future" aria-label="Themes in preparation">
+      {futureCollections.length > 0 ? (
+        <section className="screen shell explore-future" aria-label="Collections in preparation">
           <p className="section-lede explore-future__note">
-            {futureThemes.map((collection, index) => (
+            {futureCollections.map((collection, index) => (
               <span key={collection.slug}>
                 {index > 0 ? " · " : null}
                 {collection.name} — more material is being prepared.

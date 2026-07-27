@@ -28,6 +28,7 @@ import path from "path";
 import keystaticConfig from "../keystatic.config";
 import { COLLECTIONS, isCollectionSlug, type CollectionDef } from "./collections";
 import { PUBLIC_COLLECTION_MIN_WORKS } from "./site";
+import { isThemeId } from "./themeIds";
 import {
   isCanonicalPlatform,
   isDistributionPlatform,
@@ -114,6 +115,11 @@ export type Work = {
   };
   /** Explicit related work slugs; empty means use series/topic matching. */
   related: string[];
+  /**
+   * Stable Theme identifiers (content/themes). Distinct from `topics` (collections).
+   * Display titles are resolved from theme records, never stored here.
+   */
+  themes: string[];
   /** Date this record was added to the commons (not necessarily published). */
   date: string;
   /** Actual publication date, when known. Null if unknown. */
@@ -192,6 +198,7 @@ export type WorkEntryInput = {
   originalInstagram?: string | null;
   originalSubstack?: string | null;
   related?: ReadonlyArray<string | null> | null;
+  themes?: ReadonlyArray<string | null> | null;
   featured?: boolean | null;
   startHereOrder?: number | null;
   origin?: string | null;
@@ -396,6 +403,19 @@ function normalizeTopics(topics: ReadonlyArray<string | null> | null | undefined
   return out;
 }
 
+/** Keep only recognised Theme identifiers; unknown values are dropped silently. */
+function normalizeWorkThemeIds(
+  themes: ReadonlyArray<string | null> | null | undefined
+): string[] {
+  if (!themes?.length) return [];
+  const out: string[] = [];
+  for (const value of themes) {
+    const slug = value?.trim();
+    if (slug && isThemeId(slug) && !out.includes(slug)) out.push(slug);
+  }
+  return out;
+}
+
 function normalizeStartHereOrder(value: number | null | undefined): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   if (!Number.isInteger(value) || value < 1) return null;
@@ -586,6 +606,7 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
       substack: normalizeOptionalUrl(input.originalSubstack),
     },
     related: normalizeRelatedSlugs(input.related),
+    themes: normalizeWorkThemeIds(input.themes),
     date,
     publishedDate,
     publicationState,
@@ -836,6 +857,7 @@ type RawWorksEntry = {
     originalInstagram?: string | null;
     originalSubstack?: string | null;
     related?: ReadonlyArray<string | null> | null;
+    themes?: ReadonlyArray<string | null> | null;
     featured?: boolean | null;
     startHereOrder?: number | null;
     origin?: string | null;
@@ -890,6 +912,7 @@ function entryToInput(
     originalInstagram: entry.originalInstagram,
     originalSubstack: entry.originalSubstack,
     related: entry.related,
+    themes: entry.themes,
     featured: entry.featured,
     startHereOrder: entry.startHereOrder,
     origin: entry.origin,

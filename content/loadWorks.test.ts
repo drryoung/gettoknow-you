@@ -59,6 +59,7 @@ function work(
     distributionLinks: [],
     topics: [],
     series: null,
+    themes: [],
     watchTime: null,
     readTime: null,
     thumbnail: null,

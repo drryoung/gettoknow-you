@@ -40,6 +40,7 @@ function stubWork(slug: string): Work {
     status: "listed",
     topics: [],
     series: null,
+    themes: [],
     watchTime: null,
     readTime: null,
     thumbnail: null,

@@ -18,6 +18,8 @@ const nextConfig = {
         destination: "/library/:slug",
         permanent: true,
       },
+      // Theme slug changes: add a one-hop redirect here when a theme URL slug
+      // is deliberately renamed. Title edits alone must not change the slug.
     ];
   },
 };

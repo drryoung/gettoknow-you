@@ -7,6 +7,7 @@
  */
 import { config, fields, singleton, collection } from "@keystatic/core";
 import { COLLECTIONS } from "./content/collections";
+import { THEME_OPTIONS } from "./content/themeIds";
 import {
   CANONICAL_PLATFORM_OPTIONS,
   DISTRIBUTION_PLATFORM_OPTIONS,
@@ -19,7 +20,7 @@ export default config({
     brand: { name: "GetToKnow.You Content" },
     navigation: {
       Community: ["communityCharter"],
-      Commons: ["works"],
+      Commons: ["works", "themes"],
     },
   },
   singletons: {
@@ -117,6 +118,13 @@ export default config({
           description:
             "Which thematic collections should surface this item. An item may belong to several collections without being duplicated.",
           options: COLLECTIONS.map((c) => ({ label: c.name, value: c.slug })),
+          defaultValue: [],
+        }),
+        themes: fields.multiselect({
+          label: "Themes (editorial rooms)",
+          description:
+            "Stable Theme identifiers. Display titles come from Theme records — renaming a theme does not require editing this work.",
+          options: [...THEME_OPTIONS],
           defaultValue: [],
         }),
         series: fields.text({
@@ -372,6 +380,107 @@ export default config({
           label: "Start Here order",
           description:
             "Leave blank to exclude from /start-here. Unique positive numbers; lower appears first. Also requires Listed, Published, Content mode Hosted or Summary with usable internal content, and a working internal presentation. Reference works are excluded. Order alone is never enough.",
+        }),
+      },
+    }),
+
+    themes: collection({
+      label: "Themes",
+      path: "content/themes/*",
+      slugField: "title",
+      format: { contentField: "body" },
+      entryLayout: "form",
+      columns: ["status", "order", "showInNavigation"],
+      schema: {
+        title: fields.slug({
+          name: {
+            label: "Title",
+            description:
+              "Visible theme name. Freely editable — changing this does not change the URL slug unless you regenerate it.",
+            validation: { isRequired: true, length: { min: 1, max: 120 } },
+          },
+          slug: {
+            label: "URL slug",
+            description:
+              "Stable public URL segment and work-reference identifier. Do not change casually; title edits do not rewrite this unless you regenerate.",
+          },
+        }),
+        status: fields.select({
+          label: "Status",
+          options: [
+            { label: "Draft — not public", value: "draft" },
+            { label: "Placeholder — public room in development", value: "placeholder" },
+            { label: "Published — public with associated works", value: "published" },
+          ],
+          defaultValue: "placeholder",
+          description:
+            "Placeholder themes are public even with zero works. Draft themes are hidden.",
+        }),
+        summary: fields.text({
+          label: "Summary",
+          description: "Short description for theme cards and metadata.",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        placeholderMessage: fields.text({
+          label: "Placeholder message",
+          description:
+            "Shown when the theme is a placeholder (or has no eligible works) instead of an empty work grid.",
+          multiline: true,
+          validation: { length: { max: 600 } },
+        }),
+        coverImage: fields.text({
+          label: "Cover image",
+          description: 'Optional site path, for example "/media/posts/theme-cover.jpg".',
+          validation: { length: { max: 500 } },
+        }),
+        featuredWorks: fields.array(fields.text({ label: "Work slug" }), {
+          label: "Featured works",
+          description:
+            "Optional ordered work slugs shown first. Only publicly eligible works appear.",
+          itemLabel: (props) => props.value || "Work slug",
+        }),
+        order: fields.integer({
+          label: "Order",
+          description: "Editorial ordering on /themes. Lower appears first.",
+          defaultValue: 100,
+        }),
+        showInNavigation: fields.checkbox({
+          label: "Show in theme navigation",
+          description: "Include on theme index / Explore theme surfaces when public.",
+          defaultValue: true,
+        }),
+        seoTitle: fields.text({
+          label: "SEO title",
+          description: "Optional metadata title override.",
+          validation: { length: { max: 120 } },
+        }),
+        seoDescription: fields.text({
+          label: "SEO description",
+          description: "Optional metadata description override.",
+          multiline: true,
+          validation: { length: { max: 400 } },
+        }),
+        body: fields.markdoc({
+          label: "Introduction",
+          description:
+            "Editorial framing for the theme page. Supports paragraphs, headings, emphasis, links, and lists.",
+          extension: "mdoc",
+          options: {
+            bold: true,
+            italic: true,
+            strikethrough: false,
+            code: false,
+            heading: [2, 3],
+            blockquote: true,
+            orderedList: true,
+            unorderedList: true,
+            table: false,
+            link: true,
+            image: false,
+            divider: true,
+            codeBlock: false,
+          },
         }),
       },
     }),

@@ -5,6 +5,7 @@ import {
   getPublicWorkSlugs,
   getRelatedWorks,
 } from "../../../content/loadWorks";
+import { resolveThemesForWork } from "../../../content/loadThemes";
 import { distributionLinkLabel } from "../../../content/platforms";
 import { SITE_URL } from "../../../content/site";
 import { SiteHeader } from "../../components/SiteHeader";
@@ -57,6 +58,7 @@ export default async function LibraryItemPage({ params }: PageProps) {
   if (!work) notFound();
 
   const related = await getRelatedWorks(work, 3);
+  const themes = await resolveThemesForWork(work.themes);
   const cover = work.coverImage;
   const alsoAvailable = supplementaryDistributionLinks(work);
 
@@ -74,7 +76,7 @@ export default async function LibraryItemPage({ params }: PageProps) {
 
         <p className="eyebrow">Library</p>
         <h1>{work.title}</h1>
-        <LibraryMetadata work={work} />
+        <LibraryMetadata work={work} themes={themes} />
         <p className="library-item__summary">{work.summary}</p>
 
         {work.keyTakeaway ? (
