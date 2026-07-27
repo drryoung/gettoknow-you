@@ -5,7 +5,17 @@ const nextConfig = {
     return [
       {
         source: "/explore/archive",
-        destination: "/read",
+        destination: "/library",
+        permanent: true,
+      },
+      {
+        source: "/read",
+        destination: "/library",
+        permanent: true,
+      },
+      {
+        source: "/works/:slug",
+        destination: "/library/:slug",
         permanent: true,
       },
     ];

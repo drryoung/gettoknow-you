@@ -15,8 +15,8 @@ export const metadata: Metadata = {
 
 const GATEWAYS = [
   {
-    href: "/read",
-    label: "Read",
+    href: "/library",
+    label: "Library",
     text: "The complete published library—newest first.",
   },
   {
@@ -120,7 +120,7 @@ export default async function ExplorePage() {
         <p className="section-lede">
           Every published work in one place, newest first—the definitive public library.
         </p>
-        <a className="action-link" href="/read">
+        <a className="action-link" href="/library">
           Browse the library
         </a>
       </section>

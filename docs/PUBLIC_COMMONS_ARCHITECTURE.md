@@ -26,10 +26,11 @@ In scope now:
 * Community Charter at `/charter` from the sole Markdoc source
 * Keystatic `works` collection under `content/works/*.mdoc` (hybrid hosted / summary / reference)
 * Public work detail pages at `/works/[slug]`
-* A content library surfaced through `/explore` (themes and browsable
-  collections), `/start-here`, and `/read` (the published library)
+* A content library surfaced through `/library` and `/library/[slug]`, with
+  `/explore` (themes and browsable collections) and `/start-here`
 * Collection pages at `/explore/[collection]` only when a collection has at
-  least two publicly eligible works; `/explore/archive` permanently redirects to `/read`
+  least two publicly eligible works; `/explore/archive` and `/read` permanently
+  redirect to `/library`; `/works/[slug]` permanently redirects to `/library/[slug]`
 * `getListedWorks()` / `getPublicLibraryWorks()`, `getStartHereWorks()`,
   `getFeaturedWorks()`, `getCollectionWorks()`, `getRelatedWorks()`,
   `getPublicWorkDetail()`, and presentation-level pathway slug mapping

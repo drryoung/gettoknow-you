@@ -123,16 +123,18 @@ describe("charter route and homepage boundaries", () => {
     const header = readFileSync(path.join(root, "app/components/SiteHeader.tsx"), "utf8");
     const footer = readFileSync(path.join(root, "app/components/SiteFooter.tsx"), "utf8");
     expect(header).toContain('href: "/explore"');
-    expect(header).toContain('href: "/read"');
+    expect(header).toContain('href: "/library"');
     expect(header).toContain('href: "/try"');
     expect(header).not.toContain('href: "/meet"');
+    expect(header).not.toContain('href: "/read"');
     expect(header).toContain('href: "/about"');
     expect(header).not.toContain('href: "/charter"');
     expect(footer).toContain('href="/meet"');
+    expect(footer).toContain('href="/library"');
   });
 
   it("exposes the visitor pathway routes", () => {
-    expect(existsSync(path.join(root, "app/read/page.tsx"))).toBe(true);
+    expect(existsSync(path.join(root, "app/library/page.tsx"))).toBe(true);
     expect(existsSync(path.join(root, "app/try/page.tsx"))).toBe(true);
     expect(existsSync(path.join(root, "app/meet/page.tsx"))).toBe(true);
     expect(existsSync(path.join(root, "app/about/page.tsx"))).toBe(true);

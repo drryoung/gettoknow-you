@@ -26,9 +26,9 @@ const PATHWAYS = [
     text: "A map of themes and collections once you know where you are headed.",
   },
   {
-    href: "/read",
-    label: "Read",
-    text: "The complete published library—essays, stories, summaries, and references.",
+    href: "/library",
+    label: "Library",
+    text: "The complete published library—essays, stories, summaries, and videos hosted here.",
   },
   {
     href: "/try",

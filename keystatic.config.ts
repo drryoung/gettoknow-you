@@ -76,7 +76,7 @@ export default config({
   },
   collections: {
     works: collection({
-      label: "Works",
+      label: "Works (Content Library)",
       path: "content/works/*",
       slugField: "title",
       format: { contentField: "body" },
@@ -245,12 +245,12 @@ export default config({
           options: [{ label: "Not specified", value: "" }, ...CANONICAL_PLATFORM_OPTIONS],
           defaultValue: "",
           description:
-            "Where the authoritative current version lives. Choose GetToKnow.You when this site hosts the canonical version — the public URL is then derived as /works/[slug]; you do not type it.",
+            "Where the authoritative current version lives. Choose GetToKnow.You when this site hosts the canonical version — the public URL is then derived as /library/[slug]; you do not type it.",
         }),
         canonicalUrl: fields.text({
           label: "Canonical URL (external or first-party path)",
           description:
-            "For an external canonical source, use an absolute https URL. For a first-party page such as /charter, use the site path. Leave blank when Canonical platform is GetToKnow.You (the work page URL is derived automatically). Leave blank for developing works.",
+            "For an external canonical source, use an absolute https URL. For a first-party page such as /charter, use the site path. Leave blank when Canonical platform is GetToKnow.You (the library URL is derived automatically). Leave blank for developing works.",
           validation: { length: { max: 500 } },
         }),
         seoCanonicalUrl: fields.url({
@@ -290,11 +290,23 @@ export default config({
           }
         ),
 
-        // — Media —
-        thumbnail: fields.text({
-          label: "Thumbnail",
+        // — Media (native library) —
+        coverImage: fields.text({
+          label: "Cover image",
           description:
-            "Optional image path or URL. Leave blank if unknown — missing thumbnails render safely.",
+            'Site path for the library card and hero, for example "/media/posts/teenager.jpg". Prefer this over Thumbnail for new work.',
+          validation: { length: { max: 500 } },
+        }),
+        video: fields.text({
+          label: "Native video",
+          description:
+            'Optional site path to an MP4 served from this site, for example "/media/posts/teenager.mp4". Do not paste Xiaohongshu or Instagram embed codes.',
+          validation: { length: { max: 500 } },
+        }),
+        thumbnail: fields.text({
+          label: "Thumbnail (legacy)",
+          description:
+            "Optional fallback image path or URL when Cover image is empty.",
           validation: { length: { max: 500 } },
         }),
         watchTime: fields.text({
@@ -306,6 +318,47 @@ export default config({
           label: "Read time",
           description: 'Optional, human-readable. For example "6 min read".',
           validation: { length: { max: 20 } },
+        }),
+        languages: fields.multiselect({
+          label: "Languages",
+          description: "Languages present in the body, transcript, or translation.",
+          options: [
+            { label: "English", value: "English" },
+            { label: "Chinese", value: "Chinese" },
+          ],
+          defaultValue: [],
+        }),
+        project: fields.select({
+          label: "Project",
+          options: [
+            { label: "GetToKnow.You", value: "gettoknow" },
+            { label: "ConversationOS", value: "conversationos" },
+            { label: "MandarinOS", value: "mandarinos" },
+          ],
+          defaultValue: "gettoknow",
+          description: "Which project this library item primarily belongs to.",
+        }),
+
+        // — Original social discovery (optional) —
+        originalXiaohongshu: fields.url({
+          label: "Originally on Xiaohongshu",
+          description: "Optional discovery link. Never the only public destination.",
+        }),
+        originalInstagram: fields.url({
+          label: "Originally on Instagram",
+          description: "Optional discovery link. Never the only public destination.",
+        }),
+        originalSubstack: fields.url({
+          label: "Originally on Substack",
+          description: "Optional discovery link. Never the only public destination.",
+        }),
+
+        // — Related (explicit) —
+        related: fields.array(fields.text({ label: "Related work slug" }), {
+          label: "Related works",
+          description:
+            "Optional ordered slugs of other works to show under Related content. Leave empty to use series/topic matching.",
+          itemLabel: (props) => props.value || "Related slug",
         }),
 
         // — Curation —

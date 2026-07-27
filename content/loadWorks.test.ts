@@ -39,7 +39,7 @@ function work(
   partial: Partial<Work> & Pick<Work, "slug" | "title" | "date" | "status" | "publicationState">
 ): Work {
   const { workPath: workPathOverride, href: hrefOverride, ...rest } = partial;
-  const workPath = workPathOverride ?? `/works/${partial.slug}`;
+  const workPath = workPathOverride ?? `/library/${partial.slug}`;
   const href = hrefOverride ?? workPath;
   return {
     summary: LONG_SUMMARY,
@@ -62,6 +62,12 @@ function work(
     watchTime: null,
     readTime: null,
     thumbnail: null,
+    project: "gettoknow",
+    coverImage: null,
+    video: null,
+    languages: [],
+    original: { xiaohongshu: null, instagram: null, substack: null },
+    related: [],
     featured: false,
     startHereOrder: null,
     origin: null,
@@ -104,9 +110,9 @@ describe("normalizeWork", () => {
     expect(result).not.toBeNull();
     expect(result?.contentMode).toBe("hosted");
     expect(result?.hasBody).toBe(true);
-    expect(result?.workPath).toBe("/works/hosted-essay");
-    expect(result?.canonicalUrl).toBe("/works/hosted-essay");
-    expect(result?.href).toBe("/works/hosted-essay");
+    expect(result?.workPath).toBe("/library/hosted-essay");
+    expect(result?.canonicalUrl).toBe("/library/hosted-essay");
+    expect(result?.href).toBe("/library/hosted-essay");
     expect(result?.externalUrl).toBeNull();
   });
 
@@ -125,8 +131,8 @@ describe("normalizeWork", () => {
     expect(result).not.toBeNull();
     expect(result?.contentMode).toBe("summary");
     expect(result?.canonicalUrl).toBeNull();
-    expect(result?.workPath).toBe("/works/summary-only");
-    expect(result?.href).toBe("/works/summary-only");
+    expect(result?.workPath).toBe("/library/summary-only");
+    expect(result?.href).toBe("/library/summary-only");
   });
 
   it("keeps a published reference with a usable external URL and annotation", () => {
@@ -253,7 +259,7 @@ describe("normalizeWork", () => {
     expect(result?.canonicalUrl).toBe("/charter");
     expect(result?.internalPath).toBe("/charter");
     expect(result?.href).toBe("/charter");
-    expect(result?.workPath).toBe("/works/gettoknowyou-community-charter");
+    expect(result?.workPath).toBe("/library/gettoknowyou-community-charter");
   });
 
   it("keeps a published work with an external canonical URL", () => {
@@ -272,7 +278,7 @@ describe("normalizeWork", () => {
     expect(result?.canonicalUrl).toBe("https://www.mandarinos.app/");
     expect(result?.externalUrl).toBe("https://www.mandarinos.app/");
     expect(result?.internalPath).toBeNull();
-    expect(result?.href).toBe("/works/mandarinos");
+    expect(result?.href).toBe("/library/mandarinos");
   });
 
   it("ignores a canonical URL provided on a developing entry", () => {
@@ -1140,7 +1146,7 @@ describe("getListedWorks", () => {
     const bySlug = Object.fromEntries(works.map((w) => [w.slug, w]));
     expect(bySlug.mandarinos?.publicationState).toBe("published");
     expect(bySlug.mandarinos?.canonicalUrl).toBe("https://www.mandarinos.app/");
-    expect(bySlug.mandarinos?.href).toBe("/works/mandarinos");
+    expect(bySlug.mandarinos?.href).toBe("/library/mandarinos");
     expect(bySlug["gettoknowyou-community-charter"]?.canonicalUrl).toBe("/charter");
     expect(bySlug["gettoknowyou-community-charter"]?.href).toBe("/charter");
     expect(bySlug.conversationos).toBeUndefined();
@@ -1180,7 +1186,7 @@ describe("getListedWorks", () => {
     expect(detail?.hasBody).toBe(true);
     expect(detail?.body).not.toBeNull();
     expect(detail?.contentMode).toBe("summary");
-    expect(detail?.href).toBe("/works/conversation-missed-opportunity");
+    expect(detail?.href).toBe("/library/conversation-missed-opportunity");
   });
 
   it("keeps the published teenage founder story as a single Start Here entry", async () => {
@@ -1196,7 +1202,7 @@ describe("getListedWorks", () => {
     expect(startHereMatches[0]?.title).toBe("Conversation — Missed Teenage Opportunity");
     expect(startHereMatches[0]?.startHereOrder).toBe(1);
     expect(startHereMatches[0]?.publicationState).toBe("published");
-    expect(startHereMatches[0]?.href).toBe("/works/conversation-missed-opportunity");
+    expect(startHereMatches[0]?.href).toBe("/library/conversation-missed-opportunity");
     expect(startHere.every((w) => w.publicationState === "published")).toBe(true);
   });
 });
@@ -1294,7 +1300,7 @@ describe("distribution platforms and provenance", () => {
     });
     expect(result?.origin).toBe("instagram");
     expect(result?.canonicalPlatform).toBe("youtube");
-    expect(result?.href).toBe("/works/known-provenance");
+    expect(result?.href).toBe("/library/known-provenance");
   });
 });
 
@@ -1342,9 +1348,9 @@ describe("getStartHereWorks", () => {
     ]);
     expect(works[0]?.title).toBe("Conversation — Missed Teenage Opportunity");
     expect(works.map((w) => w.href)).toEqual([
-      "/works/conversation-missed-opportunity",
+      "/library/conversation-missed-opportunity",
       "/charter",
-      "/works/mandarinos",
+      "/library/mandarinos",
     ]);
     expect(
       works.every(
@@ -1423,11 +1429,90 @@ describe("works collection boundaries", () => {
     expect(explore).toContain('href="/start-here"');
   });
 
-  it("exposes a public /works/[slug] detail page", () => {
-    expect(existsSync(path.join(root, "app/works/[slug]/page.tsx"))).toBe(true);
-    const page = readFileSync(path.join(root, "app/works/[slug]/page.tsx"), "utf8");
+  it("exposes a public /library/[slug] detail page with native media components", () => {
+    expect(existsSync(path.join(root, "app/library/[slug]/page.tsx"))).toBe(true);
+    expect(existsSync(path.join(root, "app/library/page.tsx"))).toBe(true);
+    expect(existsSync(path.join(root, "public/media/posts"))).toBe(true);
+    const page = readFileSync(path.join(root, "app/library/[slug]/page.tsx"), "utf8");
+    const grid = readFileSync(path.join(root, "app/components/LibraryGrid.tsx"), "utf8");
+    const detail = readFileSync(path.join(root, "app/components/LibraryDetail.tsx"), "utf8");
     expect(page).toContain("getPublicWorkDetail");
     expect(page).toContain("getPublicWorkSlugs");
+    expect(page).toContain("LibraryVideo");
+    expect(page).toContain("OriginallyPublished");
+    expect(page).toContain("SITE_URL");
+    expect(page).toContain("openGraph");
+    expect(grid).toContain("LibraryCard");
+    expect(grid).not.toContain("instagram.com");
+    expect(detail).toContain("controls");
+    expect(detail).toContain("playsInline");
+    expect(detail).toContain('preload="metadata"');
+    expect(detail).not.toContain("autoPlay");
+    expect(detail).toContain("Originally published on Instagram");
+  });
+
+  it("keeps Start Here and collection cards on internal library URLs", async () => {
+    const startHere = await getStartHereWorks();
+    const listed = await getListedWorks();
+    expect(startHere.length).toBeGreaterThan(0);
+    expect(startHere.every((w) => w.href.startsWith("/library/") || w.href === "/charter")).toBe(
+      true
+    );
+    expect(listed.every((w) => w.workPath.startsWith("/library/"))).toBe(true);
+    expect(listed.every((w) => w.publicationState === "published")).toBe(true);
+  });
+
+  it("hides related content when only non-public or self references are provided", () => {
+    const current = work({
+      slug: "current",
+      title: "Current",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "published",
+      related: ["current", "missing-draft", "other-public"],
+    });
+    const other = work({
+      slug: "other-public",
+      title: "Other",
+      date: "2025-01-02",
+      status: "listed",
+      publicationState: "published",
+    });
+    const draft = work({
+      slug: "missing-draft",
+      title: "Draft",
+      date: "2025-01-03",
+      status: "draft",
+      publicationState: "developing",
+    });
+    const related = selectRelatedWorks([current, other, draft], current, 3);
+    expect(related.map((w) => w.slug)).toEqual(["other-public"]);
+  });
+
+  it("normalizes native cover, video, and original social fields", () => {
+    const result = normalizeWork({
+      slug: "native-video",
+      title: "Native Video",
+      summary: LONG_SUMMARY,
+      type: "video",
+      contentMode: "summary",
+      date: "2026-07-25",
+      publicationState: "published",
+      status: "listed",
+      coverImage: "/media/posts/example.jpg",
+      video: "/media/posts/example.mp4",
+      project: "conversationos",
+      languages: ["English", "Chinese"],
+      originalInstagram: "https://www.instagram.com/p/example/",
+      related: ["conversation-missed-opportunity"],
+    });
+    expect(result?.coverImage).toBe("/media/posts/example.jpg");
+    expect(result?.video).toBe("/media/posts/example.mp4");
+    expect(result?.project).toBe("conversationos");
+    expect(result?.languages).toEqual(["English", "Chinese"]);
+    expect(result?.original.instagram).toBe("https://www.instagram.com/p/example/");
+    expect(result?.related).toEqual(["conversation-missed-opportunity"]);
+    expect(result?.workPath).toBe("/library/native-video");
   });
 
   it("does not expose developing placeholders in WorkList", () => {
@@ -1436,21 +1521,27 @@ describe("works collection boundaries", () => {
     expect(list).not.toContain("In development");
   });
 
-  it("keeps Read and Try pages loader-driven without duplicated work copy", () => {
-    const read = readFileSync(path.join(root, "app/read/page.tsx"), "utf8");
+  it("keeps Library and Try pages loader-driven without duplicated work copy", () => {
+    const library = readFileSync(path.join(root, "app/library/page.tsx"), "utf8");
     const tryPage = readFileSync(path.join(root, "app/try/page.tsx"), "utf8");
     const header = readFileSync(path.join(root, "app/components/SiteHeader.tsx"), "utf8");
-    expect(read).toContain("getReadLibraryWorks");
+    const nextConfig = readFileSync(path.join(root, "next.config.mjs"), "utf8");
+    expect(library).toContain("getPublicLibraryWorks");
+    expect(library).toContain("LibraryGrid");
     expect(tryPage).toContain('getPathwayWorks("try")');
-    expect(read).not.toContain("Better Conversations");
-    expect(read).not.toContain("summary: \"");
+    expect(library).not.toContain("Better Conversations");
     expect(tryPage).not.toContain("summary: \"");
+    expect(header).toContain('href: "/library"');
     expect(header).not.toContain('href: "/meet"');
+    expect(existsSync(path.join(root, "app/read/page.tsx"))).toBe(false);
+    expect(nextConfig).toContain('source: "/read"');
+    expect(nextConfig).toContain('destination: "/library"');
   });
 
-  it("exposes collection routes and a permanent archive redirect to Read", () => {
+  it("exposes collection routes and permanent redirects into the Library", () => {
     expect(existsSync(path.join(root, "app/explore/[collection]/page.tsx"))).toBe(true);
     expect(existsSync(path.join(root, "app/explore/archive/page.tsx"))).toBe(false);
+    expect(existsSync(path.join(root, "app/works/[slug]/page.tsx"))).toBe(false);
     const collectionPage = readFileSync(
       path.join(root, "app/explore/[collection]/page.tsx"),
       "utf8"
@@ -1459,7 +1550,10 @@ describe("works collection boundaries", () => {
     expect(collectionPage).toContain("notFound");
     expect(collectionPage).toContain("isCollectionPubliclyBrowsable");
     expect(nextConfig).toContain('source: "/explore/archive"');
-    expect(nextConfig).toContain('destination: "/read"');
+    expect(nextConfig).toContain('destination: "/library"');
+    expect(nextConfig).toContain('source: "/works/:slug"');
+    expect(nextConfig).toContain('destination: "/library/:slug"');
+    expect(nextConfig).toContain('source: "/read"');
     expect(nextConfig).toContain("permanent: true");
   });
 

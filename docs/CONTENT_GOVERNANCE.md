@@ -15,7 +15,7 @@ GetToKnow.You keeps two separate content domains:
 | Domain | Authority | Purpose |
 |---|---|---|
 | Community Charter | `content/community-charter.mdoc` only | Constitutional foundation of the community |
-| Curated works | Keystatic `works` collection under `content/works/*.mdoc` | Hybrid library: hosted, summary, and reference works |
+| Curated works (Content Library) | Keystatic `works` collection under `content/works/*.mdoc` | Hybrid library: hosted, summary, and reference works |
 
 Curated works must never become a second charter. Charter wording must never be duplicated into work records, page components, or TypeScript constants.
 
@@ -23,13 +23,13 @@ Curated works must never become a second charter. Charter wording must never be 
 
 **Record once. Publish appropriately. Curate everywhere.**
 
-A work record is one Markdoc file: metadata in frontmatter, optional rich body below. The same record may appear in the library, `/start-here`, collections, feature pages, homepage selections, and related-work sections. Do not create parallel `libraryItems`, `startHereItems`, or body-only collections.
+A work record is one Markdoc file: metadata in frontmatter, optional rich body below. The same record may appear in `/library`, `/start-here`, collections, feature pages, homepage selections, and related-work sections. Do not create parallel `libraryItems`, `content/library`, `startHereItems`, or body-only collections. The public Content Library is a presentation of `works`, not a second catalogue.
 
 ### Content mode
 
 | Mode | Meaning | Public requirements |
 |---|---|---|
-| `hosted` | GetToKnow.You holds the complete or primary public version | Non-empty document body; internal `/works/[slug]` page; no external URL required |
+| `hosted` | GetToKnow.You holds the complete or primary public version | Non-empty document body; internal `/library/[slug]` page; no external URL required |
 | `summary` | Standalone summary or adaptation; visitors understand the idea on-site | Meaningful summary; preferably key takeaway or annotation; external links optional |
 | `reference` | Catalogued external source with annotation | Usable source URL; annotation or meaningful summary; attribution where known |
 
@@ -44,17 +44,18 @@ Do not reproduce third-party copyrighted material beyond appropriate quotation a
 
 ### Public Start Here
 
-Requires listed + published + positive `startHereOrder` + `hosted` or `summary` with accessible internal presentation. References are excluded by default. Cards link to `/works/[slug]` or a first-party page such as `/charter` — never directly to Instagram or Xiaohongshu.
+Requires listed + published + positive `startHereOrder` + `hosted` or `summary` with accessible internal presentation. References are excluded by default. Cards link to `/library/[slug]` or a first-party page such as `/charter` — never directly to Instagram or Xiaohongshu.
 
 ### Provenance
 
 * **Origin** — first appearance
-* **Canonical platform** — authoritative current version. Choose `gettoknow-you` when this site hosts it; URL derives as `/works/[slug]` (or an explicit first-party path such as `/charter`)
+* **Canonical platform** — authoritative current version. Choose `gettoknow-you` when this site hosts it; URL derives as `/library/[slug]` (or an explicit first-party path such as `/charter`)
 * **Canonical URL** — external https or first-party path when needed
-* **Distribution links** — cross-posts; supplementary on the work page
+* **Distribution links** — cross-posts; supplementary on the library page
+* **Native video / cover image** — optional site paths under `/media/posts/`; social embeds are not used
 * **`seoCanonicalUrl`** — rare advanced override when a page substantially duplicates an external canonical work
 
-Library cards use the internal `href` (`/works/[slug]` or first-party path). External links appear on the work page.
+Library cards use the internal `href` (`/library/[slug]` or first-party path). External links appear on the library item page. `/works/[slug]` and `/read` permanently redirect into the library.
 
 ### Publishing workflow
 
@@ -75,7 +76,7 @@ Create work → metadata → content mode → body or annotation → canonical s
 
 ### Pathway placement and collections
 
-Read / Try / Meet use `content/sitePathways.ts` slug maps. Collection taxonomy lives in `content/collections.ts`. Feature and theme pages should reference work slugs and render cards pointing at `/works/[slug]`.
+Try / Meet use `content/sitePathways.ts` slug maps. The Library uses all publicly eligible works. Collection taxonomy lives in `content/collections.ts`. Feature and theme pages should reference work slugs and render cards pointing at `/library/[slug]`.
 
 ## Page framing copy
 

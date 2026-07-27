@@ -13,10 +13,14 @@
  *   - Start Here  → listed + published + hosted/summary with internal presentation
  *   - Collections → items whose `topics` include a given collection slug
  *   - Archive     → every non-draft item, reverse-chronological
- *   - Work pages  → /works/[slug] for listed + published, content-valid works
+ *   - Library     → /library and /library/[slug] for listed + published works
+ *   - Work pages  → /works/[slug] permanently redirects to /library/[slug]
  *
  * Draft items never appear in any public listing. Developing items remain
  * editable in Keystatic but are excluded from every public surface.
+ *
+ * Note: `content/works/*.mdoc` is the Content Library store. There is no
+ * parallel `content/library` collection — that would duplicate records.
  */
 import { createReader } from "@keystatic/core/reader";
 import Markdoc, { type RenderableTreeNode } from "@markdoc/markdoc";
@@ -49,10 +53,16 @@ export const WORK_TYPES = [
 
 export type WorkType = (typeof WORK_TYPES)[number];
 
+export const WORK_PROJECTS = ["gettoknow", "conversationos", "mandarinos"] as const;
+export type WorkProject = (typeof WORK_PROJECTS)[number];
+
+export const WORK_LANGUAGES = ["English", "Chinese"] as const;
+export type WorkLanguage = (typeof WORK_LANGUAGES)[number];
+
 /**
  * `draft` — never shown publicly.
- * `listed` — appears on /explore, its collections, Start Here, and the archive.
- * `archived` — appears only in the archive (excluded from Start Here / collections).
+ * `listed` — appears on /explore, its collections, Start Here, and the library.
+ * `archived` — kept in Git; excluded from public surfaces.
  */
 export type WorkStatus = "draft" | "listed" | "archived";
 
@@ -81,13 +91,29 @@ export type Work = {
   sourcePublication: string | null;
   /** True when the Markdoc body has real content. */
   hasBody: boolean;
-  /** Stable internal catalogue URL: /works/[slug]. */
+  /** Stable internal library URL: /library/[slug]. */
   workPath: string;
   /**
    * Primary card/list href: usually workPath; may be a first-party page such as
    * /charter when that path is the full experience for this record.
    */
   href: string;
+  /** Project badge for library cards. */
+  project: WorkProject;
+  /** Cover image path for library cards and heroes. */
+  coverImage: string | null;
+  /** Native on-site video path (MP4 under /media/...). */
+  video: string | null;
+  /** Languages present in the material. */
+  languages: WorkLanguage[];
+  /** Optional discovery links to the original social posts. */
+  original: {
+    xiaohongshu: string | null;
+    instagram: string | null;
+    substack: string | null;
+  };
+  /** Explicit related work slugs; empty means use series/topic matching. */
+  related: string[];
   /** Date this record was added to the commons (not necessarily published). */
   date: string;
   /** Actual publication date, when known. Null if unknown. */
@@ -158,6 +184,14 @@ export type WorkEntryInput = {
   watchTime?: string | null;
   readTime?: string | null;
   thumbnail?: string | null;
+  coverImage?: string | null;
+  video?: string | null;
+  languages?: ReadonlyArray<string | null> | null;
+  project?: string | null;
+  originalXiaohongshu?: string | null;
+  originalInstagram?: string | null;
+  originalSubstack?: string | null;
+  related?: ReadonlyArray<string | null> | null;
   featured?: boolean | null;
   startHereOrder?: number | null;
   origin?: string | null;
@@ -171,9 +205,61 @@ const FIRST_PARTY_PAGE_PATHS = new Set([
   "/meet",
   "/about",
   "/read",
+  "/library",
   "/explore",
   "/start-here",
 ]);
+
+function isWorkProject(value: string): value is WorkProject {
+  return (WORK_PROJECTS as readonly string[]).includes(value);
+}
+
+function isWorkLanguage(value: string): value is WorkLanguage {
+  return (WORK_LANGUAGES as readonly string[]).includes(value);
+}
+
+function normalizeLanguages(
+  values: ReadonlyArray<string | null> | null | undefined
+): WorkLanguage[] {
+  if (!values) return [];
+  const out: WorkLanguage[] = [];
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed && isWorkLanguage(trimmed) && !out.includes(trimmed)) {
+      out.push(trimmed);
+    }
+  }
+  return out;
+}
+
+function normalizeRelatedSlugs(
+  values: ReadonlyArray<string | null> | null | undefined
+): string[] {
+  if (!values) return [];
+  const out: string[] = [];
+  for (const value of values) {
+    const slug = value?.trim();
+    if (slug && !out.includes(slug)) out.push(slug);
+  }
+  return out;
+}
+
+function normalizeMediaPath(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() || "";
+  if (!trimmed) return null;
+  if (isExternalHref(trimmed)) {
+    return isUsablePublicHref(trimmed) ? trimmed : null;
+  }
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return null;
+  if (trimmed.startsWith("/keystatic") || trimmed.startsWith("/api/")) return null;
+  return trimmed;
+}
+
+function normalizeOptionalUrl(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() || "";
+  if (!trimmed) return null;
+  return isExternalHref(trimmed) && isUsablePublicHref(trimmed) ? trimmed : null;
+}
 
 function isWorkType(value: string): value is WorkType {
   return (WORK_TYPES as readonly string[]).includes(value);
@@ -238,7 +324,7 @@ export function isUsablePublicHref(href: string): boolean {
 }
 
 export function workPathForSlug(slug: string): string {
-  return `/works/${slug}`;
+  return `/library/${slug}`;
 }
 
 /**
@@ -471,6 +557,11 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
   const seoCanonicalUrl =
     seoRaw && isExternalHref(seoRaw) && isUsablePublicHref(seoRaw) ? seoRaw : null;
 
+  const coverImage =
+    normalizeMediaPath(input.coverImage) ?? normalizeMediaPath(input.thumbnail);
+  const projectRaw = input.project?.trim() ?? "";
+  const project = isWorkProject(projectRaw) ? projectRaw : "gettoknow";
+
   const work: Work = {
     slug: input.slug,
     title,
@@ -485,6 +576,16 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
     hasBody,
     workPath,
     href: workPath,
+    project,
+    coverImage,
+    video: normalizeMediaPath(input.video),
+    languages: normalizeLanguages(input.languages),
+    original: {
+      xiaohongshu: normalizeOptionalUrl(input.originalXiaohongshu),
+      instagram: normalizeOptionalUrl(input.originalInstagram),
+      substack: normalizeOptionalUrl(input.originalSubstack),
+    },
+    related: normalizeRelatedSlugs(input.related),
     date,
     publishedDate,
     publicationState,
@@ -498,7 +599,7 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
     series: input.series?.trim() || null,
     watchTime: input.watchTime?.trim() || null,
     readTime: input.readTime?.trim() || null,
-    thumbnail: input.thumbnail?.trim() || null,
+    thumbnail: normalizeMediaPath(input.thumbnail),
     featured: input.featured === true,
     startHereOrder: normalizeStartHereOrder(input.startHereOrder),
     origin: normalizeOrigin(input.origin),
@@ -662,22 +763,30 @@ export function selectBrowsableCollections(
 }
 
 /**
- * Related-content foundation: other listed items sharing the same series,
- * then items sharing at least one topic.
+ * Related content: explicit `related` slugs first, then shared series, then topics.
  */
 export function selectRelatedWorks(
   works: readonly Work[],
-  item: Pick<Work, "slug" | "series" | "topics">,
+  item: Pick<Work, "slug" | "series" | "topics" | "related">,
   limit = 3
 ): Work[] {
-  const candidates = selectPublicWorks(works).filter((work) => work.slug !== item.slug);
+  const publicWorks = selectPublicWorks(works);
+  const bySlug = new Map(publicWorks.map((work) => [work.slug, work]));
+  const related: Work[] = [];
 
+  for (const slug of item.related ?? []) {
+    if (related.length >= limit) break;
+    if (slug === item.slug) continue;
+    const work = bySlug.get(slug);
+    if (work && !related.includes(work)) related.push(work);
+  }
+
+  const candidates = publicWorks.filter((work) => work.slug !== item.slug);
   const bySeries = item.series ? candidates.filter((work) => work.series === item.series) : [];
   const byTopic = candidates.filter(
     (work) => !bySeries.includes(work) && work.topics.some((t) => item.topics.includes(t))
   );
 
-  const related: Work[] = [];
   for (const work of [...bySeries, ...byTopic]) {
     if (related.length >= limit) break;
     if (!related.includes(work)) related.push(work);
@@ -719,6 +828,14 @@ type RawWorksEntry = {
     watchTime?: string | null;
     readTime?: string | null;
     thumbnail?: string | null;
+    coverImage?: string | null;
+    video?: string | null;
+    languages?: ReadonlyArray<string | null> | null;
+    project?: string | null;
+    originalXiaohongshu?: string | null;
+    originalInstagram?: string | null;
+    originalSubstack?: string | null;
+    related?: ReadonlyArray<string | null> | null;
     featured?: boolean | null;
     startHereOrder?: number | null;
     origin?: string | null;
@@ -765,6 +882,14 @@ function entryToInput(
     watchTime: entry.watchTime,
     readTime: entry.readTime,
     thumbnail: entry.thumbnail,
+    coverImage: entry.coverImage,
+    video: entry.video,
+    languages: entry.languages,
+    project: entry.project,
+    originalXiaohongshu: entry.originalXiaohongshu,
+    originalInstagram: entry.originalInstagram,
+    originalSubstack: entry.originalSubstack,
+    related: entry.related,
     featured: entry.featured,
     startHereOrder: entry.startHereOrder,
     origin: entry.origin,
@@ -819,7 +944,7 @@ export async function getCollectionWorks(collectionSlug: string): Promise<Work[]
 }
 
 export async function getRelatedWorks(
-  item: Pick<Work, "slug" | "series" | "topics">,
+  item: Pick<Work, "slug" | "series" | "topics" | "related">,
   limit = 3
 ): Promise<Work[]> {
   return selectRelatedWorks(await readAllWorks(), item, limit);

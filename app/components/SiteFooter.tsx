@@ -8,7 +8,7 @@ export function SiteFooter({ note }: { note?: string }) {
       <nav className="footer-nav" aria-label="Footer">
         <a href="/start-here">Start Here</a>
         <a href="/explore">Explore</a>
-        <a href="/read">Read</a>
+        <a href="/library">Library</a>
         <a href="/try">Try</a>
         <a href="/meet">Meet</a>
         <a href="/about">About</a>

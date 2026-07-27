@@ -50,8 +50,8 @@ export default async function StartHerePage() {
           <a className="action-link action-link--primary" href="/explore">
             Explore
           </a>
-          <a className="action-link" href="/read">
-            Read
+          <a className="action-link" href="/library">
+            Library
           </a>
           <a className="action-link" href="/try">
             Try
