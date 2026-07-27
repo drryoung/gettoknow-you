@@ -80,12 +80,12 @@ Read / Try / Meet placement uses a small approved slug map in `content/sitePathw
 2. Open `/keystatic`.
 3. Add or edit a work under **Works**.
 4. Choose publication state:
-   * **Published** — add a verified canonical URL (https link or site path such as `/charter`).
-   * **Developing** — leave the URL blank; the site will show “In development”.
+   * **Published** — finish content-mode requirements (hosted body, meaningful summary, or reference source) so the work can appear publicly when listed.
+   * **Developing** — keep the work editable in Keystatic; it will not appear on public pages until published.
 5. Attach optional distribution links (for example Xiaohongshu or Instagram).
-6. Set status to `listed` (shows publicly) or `archived` (hidden, kept in Git).
-7. To convert developing → published later: add a verified URL and set publication state to `published`.
-8. If the work should appear on Read / Try / Meet, update `content/sitePathways.ts`.
+6. Set status to `listed` (eligible when also published) or `draft` / `archived` (hidden publicly, kept in Git).
+7. To convert developing → published later: complete the content, set publication state to `published`, and ensure status is `listed`.
+8. If the work should appear on Try / Meet, update `content/sitePathways.ts` (Read uses the full public library automatically).
 9. Review the Git changes under `content/works/`.
 10. Run validation (`npm run typecheck`, `npm test`, `npm run build`).
 11. Commit and publish through the existing Git workflow.

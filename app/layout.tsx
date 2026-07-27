@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
+import { SITE_URL } from "../content/site";
 import "./globals.css";
 
 const sourceSans = Source_Sans_3({
@@ -18,6 +19,7 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "GetToKnow.You",
     template: "%s — GetToKnow.You",

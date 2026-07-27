@@ -1,5 +1,5 @@
 import type { Work, WorkType } from "../../content/loadWorks";
-import { platformLabel } from "../../content/platforms";
+import { distributionLinkLabel } from "../../content/platforms";
 
 const TYPE_LABELS: Record<WorkType, string> = {
   essay: "Essay",
@@ -28,10 +28,6 @@ export function isExternalHref(href: string): boolean {
   return /^https?:\/\//i.test(href);
 }
 
-function isLinkable(work: Work): boolean {
-  return work.status === "listed" && work.publicationState === "published";
-}
-
 export function WorkItem({
   work,
   primaryLabel = "Open",
@@ -39,9 +35,7 @@ export function WorkItem({
   work: Work;
   primaryLabel?: string;
 }) {
-  const linkable = isLinkable(work);
   const href = work.href;
-  const title = linkable ? <a href={href}>{work.title}</a> : work.title;
   const externalBadge =
     work.contentMode === "reference" ? (
       <span className="explore-list__badge">External source</span>
@@ -67,18 +61,15 @@ export function WorkItem({
           </>
         ) : null}
       </p>
-      <h2 className="explore-list__title">{title}</h2>
+      <h2 className="explore-list__title">
+        <a href={href}>{work.title}</a>
+      </h2>
       <p className="explore-list__summary">{work.summary}</p>
       <p className="explore-list__links">
-        {linkable ? (
-          <a href={href}>{primaryLabel}</a>
-        ) : (
-          <span className="explore-list__developing">In development</span>
-        )}
-        {/* Distribution links stay supplementary; primary navigation is internal. */}
+        <a href={href}>{primaryLabel}</a>
         {work.distributionLinks.map((link) => (
           <a key={`${link.platform}-${link.url}`} href={link.url} rel="noopener noreferrer">
-            {link.label || platformLabel(link.platform)}
+            {distributionLinkLabel(link.platform, link.label)}
           </a>
         ))}
       </p>

@@ -36,7 +36,7 @@ The site should feel warm, thoughtful, spacious, human, editorial, and quietly o
 * Pathway presentation on the homepage is sequential editorial links, not a SaaS-card grid
 * On work lists, **title and summary** dominate; type and added date stay subordinate metadata
 * The **canonical link** is primary for published works; distribution links are secondary
-* Developing works use a restrained italic **“In development”** label—clear, secondary, not disabled-looking—and never an empty or fake link
+* Developing, draft, and archived works are **hidden from public listings** and return not found at `/works/[slug]`; they remain editable in Keystatic
 * Preserve responsive readability and hierarchy on mobile and desktop
 * Empty states should feel calm and unfinished-on-purpose, not promotional
 

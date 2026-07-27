@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { getHomepageFeatured } from "../content/sitePathways";
+import type { Work } from "../content/loadWorks";
 import { SiteHeader } from "./components/SiteHeader";
 import { SiteFooter } from "./components/SiteFooter";
 import { Thread } from "./components/Thread";
-import { getHomepageFeatured } from "../content/sitePathways";
-import type { Work } from "../content/loadWorks";
+import { WorkList } from "./components/WorkList";
 
 export const metadata: Metadata = {
   title: {
@@ -15,24 +16,24 @@ export const metadata: Metadata = {
 
 const PATHWAYS = [
   {
+    href: "/start-here",
+    label: "Start Here",
+    text: "A short curated introduction for first-time visitors.",
+  },
+  {
     href: "/explore",
     label: "Explore",
-    text: "A guided introduction to the ideas, stories, projects, and emerging community.",
+    text: "A map of themes and collections once you know where you are headed.",
   },
   {
     href: "/read",
     label: "Read",
-    text: "Essays, reflections, stories, and ConversationOS thinking—plus room for future writing and social references.",
+    text: "The complete published library—essays, stories, summaries, and references.",
   },
   {
     href: "/try",
     label: "Try",
-    text: "MandarinOS, ConversationOS practices, and future workshops or experiments you can put into use.",
-  },
-  {
-    href: "/meet",
-    label: "Meet",
-    text: "The emerging community, future conversations and gatherings, and the shared Community Charter.",
+    text: "MandarinOS and other practical conversation projects you can put into use.",
   },
   {
     href: "/about",
@@ -40,21 +41,6 @@ const PATHWAYS = [
     text: "Raymond Young, why he is building GetToKnow.You, and how ConversationOS and MandarinOS fit together.",
   },
 ] as const;
-
-function FeaturedWork({ work }: { work: Work }) {
-  const isPublished = work.publicationState === "published";
-  return (
-    <li className="featured-list__item">
-      <h3 className="featured-list__title">
-        {isPublished ? <a href={work.href}>{work.title}</a> : work.title}
-      </h3>
-      <p className="featured-list__summary">{work.summary}</p>
-      {!isPublished ? (
-        <p className="featured-list__state">In development</p>
-      ) : null}
-    </li>
-  );
-}
 
 export default async function Home() {
   const featured = await getHomepageFeatured();
@@ -70,7 +56,7 @@ export default async function Home() {
           <h1 id="welcome-title">Get to know someone.</h1>
           <p className="welcome-hero__lede">
             Better conversations can help us understand one another and build relationships that
-            matter.
+            matter—across language, culture, work, and everyday life.
           </p>
           <p className="welcome-hero__actions">
             <a className="action-link action-link--primary" href="/start-here">
@@ -102,49 +88,17 @@ export default async function Home() {
         </ul>
       </section>
 
-      <section className="screen shell featured" aria-labelledby="featured-title">
-        <p className="eyebrow">From the commons</p>
-        <h2 id="featured-title">A few places to start</h2>
-        <p className="section-lede">
-          Selected from the curated works collection—published pieces and honest notes on work
-          still taking shape.
-        </p>
-
-        <div className="featured-groups">
-          <div className="featured-group">
-            <h3 className="featured-group__heading">
-              <a href="/read">Read</a>
-            </h3>
-            <ul className="featured-list">
-              {featured.read.map((work) => (
-                <FeaturedWork key={work.slug} work={work} />
-              ))}
-            </ul>
-          </div>
-
-          <div className="featured-group">
-            <h3 className="featured-group__heading">
-              <a href="/try">Try</a>
-            </h3>
-            <ul className="featured-list">
-              {featured.try.map((work) => (
-                <FeaturedWork key={work.slug} work={work} />
-              ))}
-            </ul>
-          </div>
-
-          <div className="featured-group">
-            <h3 className="featured-group__heading">
-              <a href="/meet">Meet</a>
-            </h3>
-            <ul className="featured-list">
-              {featured.meet.map((work) => (
-                <FeaturedWork key={work.slug} work={work} />
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
+      {featured.length > 0 ? (
+        <section className="screen shell featured" aria-labelledby="featured-title">
+          <p className="eyebrow">From the commons</p>
+          <h2 id="featured-title">Featured</h2>
+          <p className="section-lede">
+            A couple of published pieces worth knowing about—then follow Start Here for the full
+            introduction.
+          </p>
+          <WorkList works={featured} emptyMessage="" primaryLabel="Open" />
+        </section>
+      ) : null}
 
       <section className="screen shell about-preview" aria-labelledby="about-preview-title">
         <p className="eyebrow">The founder</p>

@@ -119,14 +119,16 @@ describe("charter route and homepage boundaries", () => {
     expect(page).toContain("getHomepageFeatured");
   });
 
-  it("keeps primary navigation on the five visitor pathways", () => {
+  it("keeps Meet out of primary navigation while the route remains available", () => {
     const header = readFileSync(path.join(root, "app/components/SiteHeader.tsx"), "utf8");
+    const footer = readFileSync(path.join(root, "app/components/SiteFooter.tsx"), "utf8");
     expect(header).toContain('href: "/explore"');
     expect(header).toContain('href: "/read"');
     expect(header).toContain('href: "/try"');
-    expect(header).toContain('href: "/meet"');
+    expect(header).not.toContain('href: "/meet"');
     expect(header).toContain('href: "/about"');
     expect(header).not.toContain('href: "/charter"');
+    expect(footer).toContain('href="/meet"');
   });
 
   it("exposes the visitor pathway routes", () => {

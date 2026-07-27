@@ -7,7 +7,8 @@ import {
   getRelatedWorks,
   type WorkDetail,
 } from "../../../content/loadWorks";
-import { platformLabel } from "../../../content/platforms";
+import { platformLabel, distributionLinkLabel } from "../../../content/platforms";
+import { SITE_URL } from "../../../content/site";
 import { SiteHeader } from "../../components/SiteHeader";
 import { SiteFooter } from "../../components/SiteFooter";
 import { WorkBody } from "../../components/WorkBody";
@@ -34,10 +35,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: work.summary,
   };
 
-  // Only emit an external HTML canonical when explicitly configured for a
-  // duplicated external work. Summary/reference pages keep the internal URL.
   if (work.seoCanonicalUrl) {
     metadata.alternates = { canonical: work.seoCanonicalUrl };
+  } else {
+    metadata.alternates = { canonical: `${SITE_URL}${work.workPath}` };
   }
 
   return metadata;
@@ -120,7 +121,7 @@ function Distribution({ work }: { work: WorkDetail }) {
         {work.distributionLinks.map((link) => (
           <li key={`${link.platform}-${link.url}`}>
             <a href={link.url} rel="noopener noreferrer">
-              {link.label || platformLabel(link.platform)}
+              {distributionLinkLabel(link.platform, link.label, "watch")}
             </a>
           </li>
         ))}

@@ -1,25 +1,31 @@
 import {
+  countPublicWorksInCollection,
   getArchiveWorks,
   getListedWorks,
   getPublicWorkDetail,
   getStartHereWorks,
   hasUsablePublicDestination,
   inferContentMode,
+  isCollectionPubliclyBrowsable,
   isPublicStartHereEligible,
   isPublicWorkPageEligible,
+  isPubliclyEligible,
   isUsablePublicHref,
   markdocNodeHasContent,
   normalizeWork,
   selectArchiveWorks,
+  selectBrowsableCollections,
   selectByCollection,
   selectFeaturedWorks,
   selectListedWorks,
   selectPublicStartHereWorks,
+  selectPublicWorks,
   selectRelatedWorks,
   selectStartHere,
   type Work,
 } from "./loadWorks";
 import { COLLECTIONS, isCollectionSlug } from "./collections";
+import { PUBLIC_COLLECTION_MIN_WORKS, SITE_URL } from "./site";
 import { readdirSync, readFileSync, existsSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
@@ -478,6 +484,47 @@ describe("isPublicWorkPageEligible", () => {
   });
 });
 
+describe("selectPublicWorks", () => {
+  it("returns only listed, published, content-valid works", () => {
+    const result = selectPublicWorks([
+      work({
+        slug: "published",
+        title: "Published",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "published",
+      }),
+      work({
+        slug: "developing",
+        title: "Developing",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "developing",
+      }),
+      work({
+        slug: "draft",
+        title: "Draft",
+        date: "2025-01-01",
+        status: "draft",
+        publicationState: "developing",
+      }),
+    ]);
+    expect(result.map((w) => w.slug)).toEqual(["published"]);
+  });
+
+  it("matches isPubliclyEligible and isPublicWorkPageEligible", () => {
+    const item = work({
+      slug: "ok",
+      title: "OK",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "published",
+    });
+    expect(isPubliclyEligible(item)).toBe(true);
+    expect(isPublicWorkPageEligible(item)).toBe(true);
+  });
+});
+
 describe("selectListedWorks", () => {
   it("returns only listed works", () => {
     const result = selectListedWorks([
@@ -905,6 +952,20 @@ describe("selectFeaturedWorks", () => {
     ]);
     expect(result.map((w) => w.slug)).toEqual(["featured"]);
   });
+
+  it("excludes developing featured items from public surfaces", () => {
+    const result = selectFeaturedWorks([
+      work({
+        slug: "developing-featured",
+        title: "Developing Featured",
+        date: "2025-01-01",
+        status: "listed",
+        publicationState: "developing",
+        featured: true,
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
 });
 
 describe("selectByCollection", () => {
@@ -945,9 +1006,88 @@ describe("selectByCollection", () => {
     expect(result.map((w) => w.slug)).toEqual(["in"]);
   });
 
+  it("excludes developing items from collection listings", () => {
+    const developing = work({
+      slug: "developing-in-topic",
+      title: "Developing",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "developing",
+      topics: ["stories"],
+    });
+    const published = work({
+      slug: "published-in-topic",
+      title: "Published",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "published",
+      topics: ["stories"],
+    });
+    expect(selectByCollection([developing, published], "stories").map((w) => w.slug)).toEqual([
+      "published-in-topic",
+    ]);
+  });
+
   it("supports every collection in the taxonomy", () => {
     for (const collection of COLLECTIONS) {
       expect(isCollectionSlug(collection.slug)).toBe(true);
+    }
+  });
+});
+
+describe("collection publication threshold", () => {
+  it("requires at least two public works before a collection is browsable", () => {
+    const one = work({
+      slug: "only-one",
+      title: "Only One",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "published",
+      topics: ["workplace"],
+    });
+    expect(countPublicWorksInCollection([one], "workplace")).toBe(1);
+    expect(isCollectionPubliclyBrowsable([one], "workplace", PUBLIC_COLLECTION_MIN_WORKS)).toBe(
+      false
+    );
+
+    const two = work({
+      slug: "second",
+      title: "Second",
+      date: "2025-01-02",
+      status: "listed",
+      publicationState: "published",
+      topics: ["workplace"],
+    });
+    expect(isCollectionPubliclyBrowsable([one, two], "workplace", PUBLIC_COLLECTION_MIN_WORKS)).toBe(
+      true
+    );
+  });
+
+  it("does not count developing works toward the collection threshold", () => {
+    const developing = work({
+      slug: "stub",
+      title: "Stub",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "developing",
+      topics: ["china"],
+    });
+    const published = work({
+      slug: "real",
+      title: "Real",
+      date: "2025-01-01",
+      status: "listed",
+      publicationState: "published",
+      topics: ["china"],
+    });
+    expect(isCollectionPubliclyBrowsable([developing, published], "china")).toBe(false);
+  });
+
+  it("selectBrowsableCollections returns only collections meeting the threshold", async () => {
+    const works = await getListedWorks();
+    const browsable = selectBrowsableCollections(works);
+    for (const collection of browsable) {
+      expect(countPublicWorksInCollection(works, collection.slug)).toBeGreaterThanOrEqual(2);
     }
   });
 });
@@ -996,15 +1136,15 @@ describe("selectRelatedWorks", () => {
 describe("getListedWorks", () => {
   it("loads mdoc works through Keystatic", async () => {
     const works = await getListedWorks();
-    expect(works.length).toBeGreaterThanOrEqual(6);
+    expect(works.length).toBeGreaterThanOrEqual(4);
     const bySlug = Object.fromEntries(works.map((w) => [w.slug, w]));
     expect(bySlug.mandarinos?.publicationState).toBe("published");
     expect(bySlug.mandarinos?.canonicalUrl).toBe("https://www.mandarinos.app/");
     expect(bySlug.mandarinos?.href).toBe("/works/mandarinos");
     expect(bySlug["gettoknowyou-community-charter"]?.canonicalUrl).toBe("/charter");
     expect(bySlug["gettoknowyou-community-charter"]?.href).toBe("/charter");
-    expect(bySlug.conversationos?.publicationState).toBe("developing");
-    expect(bySlug.conversationos?.canonicalUrl).toBeNull();
+    expect(bySlug.conversationos).toBeUndefined();
+    expect(bySlug["better-conversations"]).toBeUndefined();
   });
 
   it("stores works as .mdoc only (no leftover .yaml files)", () => {
@@ -1013,17 +1153,26 @@ describe("getListedWorks", () => {
     expect(files.filter((name) => name.endsWith(".yaml") || name.endsWith(".yml"))).toEqual([]);
   });
 
-  it("never returns a draft seed item", async () => {
+  it("never returns a draft seed item or developing stub", async () => {
     const works = await getListedWorks();
     const bySlug = Object.fromEntries(works.map((w) => [w.slug, w]));
     expect(bySlug["the-second-question"]).toBeUndefined();
+    expect(bySlug["better-conversations"]).toBeUndefined();
+    expect(bySlug.conversationos).toBeUndefined();
   });
 
-  it("loads existing records that predate origin and canonicalPlatform safely", async () => {
-    const works = await getListedWorks();
-    const bySlug = Object.fromEntries(works.map((w) => [w.slug, w]));
-    expect(bySlug["better-conversations"]?.origin).toBeNull();
-    expect(bySlug["better-conversations"]?.canonicalPlatform).toBeNull();
+  it("loads legacy records without origin/canonicalPlatform via normalizeWork", () => {
+    const result = normalizeWork({
+      slug: "legacy-no-provenance",
+      title: "Legacy",
+      summary: LONG_SUMMARY,
+      type: "essay",
+      date: "2026-07-25",
+      publicationState: "developing",
+      status: "listed",
+    });
+    expect(result?.origin).toBeNull();
+    expect(result?.canonicalPlatform).toBeNull();
   });
 
   it("loads the founder summary body onto the public work page", async () => {
@@ -1044,7 +1193,7 @@ describe("getListedWorks", () => {
     expect(listedMatches).toHaveLength(1);
     expect(startHereMatches).toHaveLength(1);
     expect(legacyMatches).toHaveLength(0);
-    expect(startHereMatches[0]?.title).toBe("Conversation — Missed Opportunity");
+    expect(startHereMatches[0]?.title).toBe("Conversation — Missed Teenage Opportunity");
     expect(startHereMatches[0]?.startHereOrder).toBe(1);
     expect(startHereMatches[0]?.publicationState).toBe("published");
     expect(startHereMatches[0]?.href).toBe("/works/conversation-missed-opportunity");
@@ -1191,7 +1340,7 @@ describe("getStartHereWorks", () => {
       "gettoknowyou-community-charter",
       "mandarinos",
     ]);
-    expect(works[0]?.title).toBe("Conversation — Missed Opportunity");
+    expect(works[0]?.title).toBe("Conversation — Missed Teenage Opportunity");
     expect(works.map((w) => w.href)).toEqual([
       "/works/conversation-missed-opportunity",
       "/charter",
@@ -1247,19 +1396,18 @@ describe("works collection boundaries", () => {
     const page = readFileSync(path.join(root, "app/explore/page.tsx"), "utf8");
     const list = readFileSync(path.join(root, "app/components/WorkList.tsx"), "utf8");
     expect(page).toContain("getListedWorks");
-    expect(page).toContain("getStartHereWorks");
+    expect(page).not.toContain("getStartHereWorks");
+    expect(page).not.toContain("slice(0, 3)");
     expect(page).toContain('href="/start-here"');
-    expect(page).toContain("slice(0, 3)");
-    expect(page).toContain("New here? Start here.");
-    expect(page).not.toContain("View Start Here");
-    expect(page).toContain("WorkList");
+    expect(page).toContain("Follow the Start Here pathway");
+    expect(page).toContain("selectBrowsableCollections");
+    expect(page).not.toContain("Coming soon");
     expect(list).toContain("work.href");
     expect(list).toContain("work.title");
     expect(list).toContain("work.summary");
-    expect(list).toContain("In development");
+    expect(list).not.toContain("In development");
     expect(page).not.toContain("canonicalUrl: \"http");
     expect(page).not.toContain("summary: \"");
-    expect(page).not.toContain("MandarinOS is the first practical");
   });
 
   it("exposes a dedicated /start-here route that uses the same public Start Here selector", () => {
@@ -1271,7 +1419,7 @@ describe("works collection boundaries", () => {
     expect(page).toContain("Start Here");
     expect(page).not.toContain("In development");
     expect(page).not.toContain("coming soon");
-    expect(explore).toContain("getStartHereWorks");
+    expect(explore).not.toContain("getStartHereWorks");
     expect(explore).toContain('href="/start-here"');
   });
 
@@ -1282,31 +1430,44 @@ describe("works collection boundaries", () => {
     expect(page).toContain("getPublicWorkSlugs");
   });
 
-  it("does not render a developing entry as an empty canonical link in the page source", () => {
+  it("does not expose developing placeholders in WorkList", () => {
     const list = readFileSync(path.join(root, "app/components/WorkList.tsx"), "utf8");
-    expect(list).toContain("explore-list__developing");
-    expect(list).toContain('publicationState === "published"');
+    expect(list).not.toContain("explore-list__developing");
+    expect(list).not.toContain("In development");
   });
 
   it("keeps Read and Try pages loader-driven without duplicated work copy", () => {
     const read = readFileSync(path.join(root, "app/read/page.tsx"), "utf8");
     const tryPage = readFileSync(path.join(root, "app/try/page.tsx"), "utf8");
-    expect(read).toContain('getPathwayWorks("read")');
+    const header = readFileSync(path.join(root, "app/components/SiteHeader.tsx"), "utf8");
+    expect(read).toContain("getReadLibraryWorks");
     expect(tryPage).toContain('getPathwayWorks("try")');
     expect(read).not.toContain("Better Conversations");
-    expect(tryPage).not.toContain("MandarinOS is the first practical");
     expect(read).not.toContain("summary: \"");
     expect(tryPage).not.toContain("summary: \"");
+    expect(header).not.toContain('href: "/meet"');
   });
 
-  it("exposes a dedicated collection route and archive route", () => {
+  it("exposes collection routes and a permanent archive redirect to Read", () => {
     expect(existsSync(path.join(root, "app/explore/[collection]/page.tsx"))).toBe(true);
-    expect(existsSync(path.join(root, "app/explore/archive/page.tsx"))).toBe(true);
+    expect(existsSync(path.join(root, "app/explore/archive/page.tsx"))).toBe(false);
     const collectionPage = readFileSync(
       path.join(root, "app/explore/[collection]/page.tsx"),
       "utf8"
     );
+    const nextConfig = readFileSync(path.join(root, "next.config.mjs"), "utf8");
     expect(collectionPage).toContain("notFound");
-    expect(collectionPage).toContain("getCollectionWorks");
+    expect(collectionPage).toContain("isCollectionPubliclyBrowsable");
+    expect(nextConfig).toContain('source: "/explore/archive"');
+    expect(nextConfig).toContain('destination: "/read"');
+    expect(nextConfig).toContain("permanent: true");
+  });
+
+  it("uses a central production host in root metadata", () => {
+    const layout = readFileSync(path.join(root, "app/layout.tsx"), "utf8");
+    const site = readFileSync(path.join(root, "content/site.ts"), "utf8");
+    expect(site).toContain(SITE_URL);
+    expect(layout).toContain("metadataBase");
+    expect(layout).toContain("SITE_URL");
   });
 });

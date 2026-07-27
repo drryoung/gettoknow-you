@@ -15,14 +15,15 @@
  *   - Archive     → every non-draft item, reverse-chronological
  *   - Work pages  → /works/[slug] for listed + published, content-valid works
  *
- * Draft items never appear in any public listing. Developing items may appear
- * as honest signposts in Explore/archive but never receive a public work page.
+ * Draft items never appear in any public listing. Developing items remain
+ * editable in Keystatic but are excluded from every public surface.
  */
 import { createReader } from "@keystatic/core/reader";
 import Markdoc, { type RenderableTreeNode } from "@markdoc/markdoc";
 import path from "path";
 import keystaticConfig from "../keystatic.config";
-import { isCollectionSlug } from "./collections";
+import { COLLECTIONS, isCollectionSlug, type CollectionDef } from "./collections";
+import { PUBLIC_COLLECTION_MIN_WORKS } from "./site";
 import {
   isCanonicalPlatform,
   isDistributionPlatform,
@@ -526,6 +527,33 @@ export function selectListedWorks(works: readonly Work[]): Work[] {
 }
 
 /**
+ * Authoritative public eligibility for cards, library listings, collections,
+ * related works, and work pages. Draft, archived, developing, and invalid
+ * published records never appear on public surfaces.
+ */
+export function isPubliclyEligible(work: Work): boolean {
+  return (
+    work.status === "listed" &&
+    work.publicationState === "published" &&
+    isPublishedContentValid(work)
+  );
+}
+
+/** All publicly eligible works, newest publication (or added) date first. */
+export function selectPublicWorks(works: readonly Work[]): Work[] {
+  return works
+    .filter(isPubliclyEligible)
+    .slice()
+    .sort((a, b) => {
+      const aDate = a.publishedDate ?? a.date;
+      const bDate = b.publishedDate ?? b.date;
+      const byDate = bDate.localeCompare(aDate);
+      if (byDate !== 0) return byDate;
+      return a.slug.localeCompare(b.slug);
+    });
+}
+
+/**
  * Archive layer: every non-draft item (listed or archived), sorted
  * reverse-chronologically by published date when known, falling back to
  * added date.
@@ -596,14 +624,41 @@ export function selectPublicStartHereWorks(works: readonly Work[]): Work[] {
 /** @deprecated Prefer `selectPublicStartHereWorks` for new call sites. */
 export const selectStartHere = selectPublicStartHereWorks;
 
-/** Featured layer: listed items eligible for prominent display. */
+/** Featured layer: publicly eligible items marked featured. */
 export function selectFeaturedWorks(works: readonly Work[]): Work[] {
-  return selectListedWorks(works).filter((work) => work.featured);
+  return selectPublicWorks(works).filter((work) => work.featured);
 }
 
-/** Collection layer: listed items whose topics include the given collection slug. */
+/** Collection layer: public items whose topics include the given collection slug. */
 export function selectByCollection(works: readonly Work[], collectionSlug: string): Work[] {
-  return selectListedWorks(works).filter((work) => work.topics.includes(collectionSlug));
+  return selectPublicWorks(works).filter((work) => work.topics.includes(collectionSlug));
+}
+
+/** Count publicly eligible works in a collection topic. */
+export function countPublicWorksInCollection(
+  works: readonly Work[],
+  collectionSlug: string
+): number {
+  return selectByCollection(works, collectionSlug).length;
+}
+
+/** A collection is browsable when it has enough real published material. */
+export function isCollectionPubliclyBrowsable(
+  works: readonly Work[],
+  collectionSlug: string,
+  minimum = 2
+): boolean {
+  return countPublicWorksInCollection(works, collectionSlug) >= minimum;
+}
+
+/** Collection cards and routes appear only when enough published works exist. */
+export function selectBrowsableCollections(
+  works: readonly Work[],
+  minimum = PUBLIC_COLLECTION_MIN_WORKS
+): CollectionDef[] {
+  return COLLECTIONS.filter((collection) =>
+    isCollectionPubliclyBrowsable(works, collection.slug, minimum)
+  );
 }
 
 /**
@@ -615,7 +670,7 @@ export function selectRelatedWorks(
   item: Pick<Work, "slug" | "series" | "topics">,
   limit = 3
 ): Work[] {
-  const candidates = selectListedWorks(works).filter((work) => work.slug !== item.slug);
+  const candidates = selectPublicWorks(works).filter((work) => work.slug !== item.slug);
 
   const bySeries = item.series ? candidates.filter((work) => work.series === item.series) : [];
   const byTopic = candidates.filter(
@@ -630,13 +685,9 @@ export function selectRelatedWorks(
   return related;
 }
 
-/** Whether a work may be shown on /works/[slug]. */
+/** Whether a work may be shown on /works/[slug]. Alias for {@link isPubliclyEligible}. */
 export function isPublicWorkPageEligible(work: Work): boolean {
-  return (
-    work.status === "listed" &&
-    work.publicationState === "published" &&
-    isPublishedContentValid(work)
-  );
+  return isPubliclyEligible(work);
 }
 
 type RawWorksEntry = {
@@ -741,8 +792,14 @@ async function readAllWorks(): Promise<Work[]> {
   return works;
 }
 
+/** Public library listing — published, listed, content-valid works only. */
 export async function getListedWorks(): Promise<Work[]> {
-  return selectListedWorks(await readAllWorks());
+  return selectPublicWorks(await readAllWorks());
+}
+
+/** Alias for the public published library (Read page). */
+export async function getPublicLibraryWorks(): Promise<Work[]> {
+  return getListedWorks();
 }
 
 export async function getArchiveWorks(): Promise<Work[]> {

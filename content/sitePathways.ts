@@ -1,28 +1,19 @@
 /**
  * Presentation-level mapping of curated works to visitor pathways.
  *
- * This is not a content taxonomy stored on every work record.
- * It selects approved slugs for Read / Try / Meet surfaces so pages
- * remain loader-driven without hard-coding titles or summaries in TSX.
+ * Read uses the full public library. Try and Meet keep slug-based curation
+ * so those pages can highlight practical projects and community material
+ * without hard-coding titles or summaries in TSX.
  */
-import { getListedWorks, type Work } from "./loadWorks";
+import { getFeaturedWorks, getListedWorks, getPublicLibraryWorks, type Work } from "./loadWorks";
 
-export type PathwaySection = "read" | "try" | "meet";
+export type PathwaySection = "try" | "meet";
 
-/** Approved slug → section assignments for the current provisional commons. */
+/** Approved slug → section assignments for Try / Meet surfaces. */
 export const PATHWAY_SLUGS: Readonly<Record<PathwaySection, readonly string[]>> = {
-  read: [
-    "better-conversations",
-    "cross-cultural-stories",
-    "trust-and-human-connection",
-  ],
   try: ["mandarinos", "conversationos"],
   meet: ["gettoknowyou-community-charter"],
 };
-
-/** Homepage featured preview: a small curated subset per pathway. */
-export const HOMEPAGE_FEATURED_SLUGS: Readonly<Record<PathwaySection, readonly string[]>> =
-  PATHWAY_SLUGS;
 
 export function selectWorksBySlugs(
   works: readonly Work[],
@@ -42,11 +33,13 @@ export async function getPathwayWorks(section: PathwaySection): Promise<Work[]> 
   return selectWorksBySlugs(works, PATHWAY_SLUGS[section]);
 }
 
-export async function getHomepageFeatured(): Promise<Record<PathwaySection, Work[]>> {
-  const works = await getListedWorks();
-  return {
-    read: selectWorksBySlugs(works, HOMEPAGE_FEATURED_SLUGS.read),
-    try: selectWorksBySlugs(works, HOMEPAGE_FEATURED_SLUGS.try),
-    meet: selectWorksBySlugs(works, HOMEPAGE_FEATURED_SLUGS.meet),
-  };
+/** Complete published library for Read. */
+export async function getReadLibraryWorks(): Promise<Work[]> {
+  return getPublicLibraryWorks();
+}
+
+/** Homepage: at most two featured published works. */
+export async function getHomepageFeatured(): Promise<Work[]> {
+  const works = await getFeaturedWorks();
+  return works.slice(0, 2);
 }

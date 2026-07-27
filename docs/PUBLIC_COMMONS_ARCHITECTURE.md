@@ -26,13 +26,14 @@ In scope now:
 * Community Charter at `/charter` from the sole Markdoc source
 * Keystatic `works` collection under `content/works/*.mdoc` (hybrid hosted / summary / reference)
 * Public work detail pages at `/works/[slug]`
-* A three-layer content library surfaced through `/explore`: **Start Here**,
-  **Collections** (`/explore/[collection]`), and **Archive**
-  (`/explore/archive`), plus `/start-here`
-* `getListedWorks()`, `getStartHereWorks()`, `getFeaturedWorks()`,
-  `getCollectionWorks()`, `getArchiveWorks()`, `getRelatedWorks()`,
+* A content library surfaced through `/explore` (themes and browsable
+  collections), `/start-here`, and `/read` (the published library)
+* Collection pages at `/explore/[collection]` only when a collection has at
+  least two publicly eligible works; `/explore/archive` permanently redirects to `/read`
+* `getListedWorks()` / `getPublicLibraryWorks()`, `getStartHereWorks()`,
+  `getFeaturedWorks()`, `getCollectionWorks()`, `getRelatedWorks()`,
   `getPublicWorkDetail()`, and presentation-level pathway slug mapping
-* Published, developing, and draft work states with content-mode validation
+* Central public eligibility (`isPubliclyEligible`): listed + published + content-valid
 * Governance, design, and architecture documentation
 * Tests protecting charter authority, works loading, and library layering
 
@@ -72,16 +73,16 @@ Library cards and Start Here link to `/works/[slug]` (or a first-party page such
 ### Published and developing
 
 * **Published** works — content-mode validation passed; public `/works/[slug]` when listed
-* **Developing** works — transparent signposts with an “In development” label; no public work page
+* **Developing** / **draft** / **archived** works — editable in Keystatic; excluded from every public listing and work page
 
 ### Pathway selection
 
-Read / Try / Meet surfaces select works through `content/sitePathways.ts`. Work titles and summaries always come from the loader.
+Try / Meet surfaces select works through `content/sitePathways.ts`. Read uses the full public library. Work titles and summaries always come from the loader.
 
-## 6a. Content library model (Start Here / Collections / Archive)
+## 6a. Content library model (Start Here / Collections / Library)
 
 The content library is **the same `works` collection**, not a second content
-system. Every item exists once in `content/works/*`; the three visitor layers
+system. Every item exists once in `content/works/*`; the visitor layers
 below are derived views over that one source of truth.
 
 | Field | Purpose |
@@ -105,9 +106,9 @@ Each work may carry a Markdoc body. Hosted public works require a non-empty body
 Collection taxonomy (`content/collections.ts`) defines: Stories, Conversation, Relationships, Emotional Intelligence, Workplace, China, and Language Learning.
 
 * **Start Here** — listed + published + positive order + hosted/summary with internal presentation. References excluded. Cards link internally.
-* **Collections** — listed items by `topics`
-* **Archive** — non-draft items, reverse-chronological
-* **Related content** — shared series then topics; rendered on `/works/[slug]`
+* **Collections** — publicly eligible works by `topics`; browsable only with ≥2 public works
+* **Read (library)** — all publicly eligible works
+* **Related content** — shared series then topics among public works; rendered on `/works/[slug]`
 * **Work pages** — `/works/[slug]` for listed + published + content-valid works
 
 Future pattern for collections and feature pages:
@@ -136,19 +137,19 @@ Announcements, reminders, comments, minor variants, and temporary updates normal
 |---|---|
 | `/` | Welcoming homepage; pathways; featured works preview; founder preview; Charter note |
 | `/start-here` | Canonical public introductory sequence for first-time / social-media visitors |
-| `/explore` | Gateway overview: Start Here preview, Collections grid, and a link into the Archive |
-| `/explore/[collection]` | One reusable template rendering any collection from `content/collections.ts`; unknown slugs 404 |
-| `/explore/archive` | Complete reverse-chronological index of non-draft works |
-| `/read` | Editorial list of reading-oriented works |
+| `/explore` | Theme / collection map; Start Here invitation; link to the published library |
+| `/explore/[collection]` | Collection page when ≥2 publicly eligible works; otherwise 404 |
+| `/explore/archive` | Permanent redirect to `/read` (legacy inbound links) |
+| `/read` | Complete published library |
 | `/try` | Practical projects and practices (MandarinOS clearest active action) |
-| `/meet` | Emerging community framing and Charter pathway |
+| `/meet` | Emerging community framing and Charter pathway (footer / direct URL; not primary nav) |
 | `/about` | Founder and ecosystem context |
 | `/works/[slug]` | Individual work page (hosted / summary / reference) |
 | `/charter` | Full authoritative Community Charter |
 | `/keystatic` | Local content editor only (development); production 404 |
 | `/api/keystatic` | Local Keystatic API only (development); production 404 |
 
-Published listed works are reached through `/works/[slug]` (or first-party pages such as `/charter`). Developing works have no destination link. `/explore/[collection]` and `/explore/archive` are library index views.
+Published listed works are reached through `/works/[slug]` (or first-party pages such as `/charter`). Draft, developing, and archived works are hidden from public listings and return not found at `/works/[slug]`.
 
 ## 10. Founder editing workflow
 

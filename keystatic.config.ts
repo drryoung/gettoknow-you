@@ -146,7 +146,7 @@ export default config({
           ],
           defaultValue: "developing",
           description:
-            "Published: finished and safe for visitors. Developing: honest signpost with an \u201cIn development\u201d label; no public work page.",
+            "Published: finished and safe for visitors. Developing: editable in Keystatic but hidden from every public surface until published.",
         }),
         contentMode: fields.select({
           label: "Content mode",

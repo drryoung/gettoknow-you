@@ -101,3 +101,21 @@ export function isOrigin(value: string): value is Origin {
 export function platformLabel(value: string): string {
   return PLATFORM_LABELS[value] ?? value;
 }
+
+/** Descriptive label for supplementary social or distribution links. */
+export function distributionLinkLabel(
+  platform: string,
+  customLabel?: string | null,
+  variant: "watch" | "also" = "also"
+): string {
+  if (customLabel) return customLabel;
+  const name = platformLabel(platform);
+  if (variant === "watch") {
+    if (platform === "instagram") return "Watch the original on Instagram";
+    if (platform === "xiaohongshu") return "Watch the original on Xiaohongshu";
+    return `Watch the original on ${name}`;
+  }
+  if (platform === "instagram") return "Also available on Instagram";
+  if (platform === "xiaohongshu") return "Also available on Xiaohongshu";
+  return `Also available on ${name}`;
+}
