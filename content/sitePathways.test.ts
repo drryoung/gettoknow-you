@@ -45,7 +45,6 @@ function stubWork(slug: string): Work {
     readTime: null,
     thumbnail: null,
     featured: false,
-    startHereOrder: null,
     origin: null,
     canonicalPlatform: null,
   };

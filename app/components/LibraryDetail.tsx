@@ -89,7 +89,7 @@ export function LibraryVideo({
   const mime = src.toLowerCase().endsWith(".webm") ? "video/webm" : "video/mp4";
 
   return (
-    <div className="library-video">
+    <div id="video" className="library-video">
       <video
         className="library-video__player"
         controls

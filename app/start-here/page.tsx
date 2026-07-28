@@ -33,7 +33,6 @@ export default async function StartHerePage() {
         <WorkList
           works={works}
           emptyMessage="The curated Start Here sequence is still being assembled."
-          primaryLabel="Open"
         />
       </section>
 

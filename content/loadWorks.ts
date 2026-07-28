@@ -10,7 +10,9 @@
  *   - Reference → annotated external source; not Start Here by default
  *
  * Visitor layers derived from this one collection (never duplicated):
- *   - Start Here  → listed + published + hosted/summary with internal presentation
+ *   - Start Here  → ordered work slugs from the Start Here Keystatic singleton,
+ *                   filtered by listed + published + hosted/summary with
+ *                   accessible internal presentation (reference works excluded)
  *   - Collections → items whose `topics` include a given collection slug
  *   - Archive     → every non-draft item, reverse-chronological
  *   - Library     → /library and /library/[slug] for listed + published works
@@ -148,8 +150,6 @@ export type Work = {
   readTime: string | null;
   thumbnail: string | null;
   featured: boolean;
-  /** Position in the curated Start Here sequence, ascending. Null = not included. */
-  startHereOrder: number | null;
   /** Where this item was first published, when known. Editorial record only. */
   origin: Origin | null;
   /** Which platform hosts the authoritative version, when known. */
@@ -200,7 +200,6 @@ export type WorkEntryInput = {
   related?: ReadonlyArray<string | null> | null;
   themes?: ReadonlyArray<string | null> | null;
   featured?: boolean | null;
-  startHereOrder?: number | null;
   origin?: string | null;
   canonicalPlatform?: string | null;
 };
@@ -416,12 +415,6 @@ function normalizeWorkThemeIds(
   return out;
 }
 
-function normalizeStartHereOrder(value: number | null | undefined): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value)) return null;
-  if (!Number.isInteger(value) || value < 1) return null;
-  return value;
-}
-
 function meaningfulText(value: string | null | undefined, min = 1): string | null {
   const trimmed = value?.trim() || "";
   return trimmed.length >= min ? trimmed : null;
@@ -622,7 +615,6 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
     readTime: input.readTime?.trim() || null,
     thumbnail: normalizeMediaPath(input.thumbnail),
     featured: input.featured === true,
-    startHereOrder: normalizeStartHereOrder(input.startHereOrder),
     origin: normalizeOrigin(input.origin),
     canonicalPlatform,
   };
@@ -694,18 +686,17 @@ export function selectArchiveWorks(works: readonly Work[]): Work[] {
 }
 
 /**
- * Public Start Here eligibility.
+ * Public Start Here eligibility (membership is decided by the Start Here
+ * singleton sequence; this gate only checks public readiness).
  *
- * Requires listed + published + positive order + hosted/summary with an
- * accessible internal presentation. Reference works are excluded by default.
- * External URLs are never required.
+ * Requires listed + published + hosted/summary with an accessible internal
+ * presentation. Reference works are excluded by default. External URLs are
+ * never required.
  */
 export function isPublicStartHereEligible(work: Work): boolean {
   return (
     work.status === "listed" &&
     work.publicationState === "published" &&
-    work.startHereOrder !== null &&
-    work.startHereOrder >= 1 &&
     work.contentMode !== "reference" &&
     hasAccessibleInternalPresentation(work)
   );
@@ -725,22 +716,24 @@ export function hasUsablePublicDestination(
 }
 
 /**
- * Public Start Here sequence: eligible works ascending by startHereOrder.
- * Deterministic when two works share an order.
+ * Public Start Here sequence from an ordered list of work slugs.
+ * Skips missing, duplicate, and ineligible entries. Order is editorial only.
  */
-export function selectPublicStartHereWorks(works: readonly Work[]): Work[] {
-  return works
-    .filter(isPublicStartHereEligible)
-    .slice()
-    .sort((a, b) => {
-      const byOrder = (a.startHereOrder ?? 0) - (b.startHereOrder ?? 0);
-      if (byOrder !== 0) return byOrder;
-      const aDate = a.publishedDate ?? a.date;
-      const bDate = b.publishedDate ?? b.date;
-      const byDate = bDate.localeCompare(aDate);
-      if (byDate !== 0) return byDate;
-      return a.slug.localeCompare(b.slug);
-    });
+export function selectPublicStartHereWorks(
+  works: readonly Work[],
+  orderedSlugs: readonly string[]
+): Work[] {
+  const eligible = new Map(
+    works.filter(isPublicStartHereEligible).map((work) => [work.slug, work])
+  );
+  const out: Work[] = [];
+  for (const raw of orderedSlugs) {
+    const slug = raw?.trim();
+    if (!slug) continue;
+    const work = eligible.get(slug);
+    if (work && !out.includes(work)) out.push(work);
+  }
+  return out;
 }
 
 /** @deprecated Prefer `selectPublicStartHereWorks` for new call sites. */
@@ -859,7 +852,6 @@ type RawWorksEntry = {
     related?: ReadonlyArray<string | null> | null;
     themes?: ReadonlyArray<string | null> | null;
     featured?: boolean | null;
-    startHereOrder?: number | null;
     origin?: string | null;
     canonicalPlatform?: string | null;
   };
@@ -914,7 +906,6 @@ function entryToInput(
     related: entry.related,
     themes: entry.themes,
     featured: entry.featured,
-    startHereOrder: entry.startHereOrder,
     origin: entry.origin,
     canonicalPlatform: entry.canonicalPlatform,
   };
@@ -955,7 +946,11 @@ export async function getArchiveWorks(): Promise<Work[]> {
 }
 
 export async function getStartHereWorks(): Promise<Work[]> {
-  return selectPublicStartHereWorks(await readAllWorks());
+  const data = await reader.singletons.startHere.read();
+  const orderedSlugs = (data?.items ?? [])
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+  return selectPublicStartHereWorks(await readAllWorks(), orderedSlugs);
 }
 
 export async function getFeaturedWorks(): Promise<Work[]> {

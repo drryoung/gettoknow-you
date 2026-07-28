@@ -65,7 +65,6 @@ function work(
     original: { xiaohongshu: null, instagram: null, substack: null },
     related: [],
     featured: false,
-    startHereOrder: null,
     origin: null,
     canonicalPlatform: null,
     workPath,

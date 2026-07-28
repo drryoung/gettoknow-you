@@ -28,14 +28,28 @@ export function isExternalHref(href: string): boolean {
   return /^https?:\/\//i.test(href);
 }
 
+/** Primary card CTA for Start Here / Explore lists. */
+export function workPrimaryAction(work: Work): { href: string; label: string } {
+  if (work.video) {
+    return { href: `${work.workPath}#video`, label: "Watch video" };
+  }
+  return { href: work.href, label: "Open" };
+}
+
+/** Title / card link: Library page for hosted-video works; otherwise the work href. */
+export function workTitleHref(work: Work): string {
+  return work.video ? work.workPath : work.href;
+}
+
 export function WorkItem({
   work,
-  primaryLabel = "Open",
 }: {
   work: Work;
+  /** @deprecated Per-item labels come from {@link workPrimaryAction}. */
   primaryLabel?: string;
 }) {
-  const href = work.href;
+  const titleHref = workTitleHref(work);
+  const action = workPrimaryAction(work);
   const externalBadge =
     work.contentMode === "reference" ? (
       <span className="explore-list__badge">External source</span>
@@ -62,11 +76,11 @@ export function WorkItem({
         ) : null}
       </p>
       <h2 className="explore-list__title">
-        <a href={href}>{work.title}</a>
+        <a href={titleHref}>{work.title}</a>
       </h2>
       <p className="explore-list__summary">{work.summary}</p>
       <p className="explore-list__links">
-        <a href={href}>{primaryLabel}</a>
+        <a href={action.href}>{action.label}</a>
         {work.distributionLinks.map((link) => (
           <a key={`${link.platform}-${link.url}`} href={link.url} rel="noopener noreferrer">
             {distributionLinkLabel(link.platform, link.label)}
@@ -80,10 +94,10 @@ export function WorkItem({
 export function WorkList({
   works,
   emptyMessage,
-  primaryLabel,
 }: {
   works: Work[];
   emptyMessage: string;
+  /** @deprecated Ignored — CTAs are derived per work. */
   primaryLabel?: string;
 }) {
   if (works.length === 0) {
@@ -93,7 +107,7 @@ export function WorkList({
   return (
     <ul className="explore-list">
       {works.map((work) => (
-        <WorkItem key={work.slug} work={work} primaryLabel={primaryLabel} />
+        <WorkItem key={work.slug} work={work} />
       ))}
     </ul>
   );

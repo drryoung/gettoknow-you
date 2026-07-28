@@ -18,4 +18,9 @@ Do not embed Xiaohongshu or Instagram players. Social platforms remain optional 
 
 - Empty optional media fields are fine; cards and pages fall back cleanly.
 - Large media belongs in this folder only when it is the lasting public asset for a published work.
+- Prefer MP4 (H.264 + AAC) for browser compatibility. MOV files may not play in all browsers; convert before treating a native video as production-ready.
 - v1 does not include cloud storage, transcoding, or a separate video host.
+
+## Action note — Dunedin checkout video
+
+Hosted path: `/media/posts/Checkout-chick-successful-conversation.mp4` (H.264/AAC MP4).

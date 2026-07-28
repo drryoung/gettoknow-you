@@ -19,7 +19,7 @@ export default config({
   ui: {
     brand: { name: "GetToKnow.You Content" },
     navigation: {
-      Community: ["communityCharter"],
+      Community: ["communityCharter", "startHere"],
       Commons: ["works", "themes"],
     },
   },
@@ -71,6 +71,19 @@ export default config({
             divider: false,
             codeBlock: false,
           },
+        }),
+      },
+    }),
+    startHere: singleton({
+      label: "Start Here",
+      path: "content/start-here",
+      format: { data: "yaml" },
+      schema: {
+        items: fields.array(fields.text({ label: "Work slug" }), {
+          label: "Sequence",
+          description:
+            "Ordered Start Here items by stable work slug. Use gettoknowyou-community-charter for the Community Charter Library signpost (authoritative charter text remains the Community Charter singleton). Only publicly eligible works appear; missing or ineligible slugs are skipped.",
+          itemLabel: (props) => props.value || "Work slug",
         }),
       },
     }),
@@ -373,13 +386,8 @@ export default config({
         featured: fields.checkbox({
           label: "Featured",
           description:
-            "Eligible for prominent placement. Featured alone does not place it in Start Here.",
+            "Eligible for prominent placement (for example the homepage). Featured alone does not place it in Start Here — edit the Start Here singleton sequence.",
           defaultValue: false,
-        }),
-        startHereOrder: fields.integer({
-          label: "Start Here order",
-          description:
-            "Leave blank to exclude from /start-here. Unique positive numbers; lower appears first. Also requires Listed, Published, Content mode Hosted or Summary with usable internal content, and a working internal presentation. Reference works are excluded. Order alone is never enough.",
         }),
       },
     }),
