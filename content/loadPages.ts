@@ -76,9 +76,6 @@ export type ExplorePageCopy = {
   themesHeading: string;
   themesLede: string;
   themesCtaLabel: string;
-  collectionsEyebrow: string;
-  collectionsHeading: string;
-  collectionsLede: string;
   libraryEyebrow: string;
   libraryHeading: string;
   libraryLede: string;
@@ -269,9 +266,6 @@ export async function getExplorePageCopy(): Promise<
     themesHeading: requiredText(data.themesHeading, "explore.themesHeading"),
     themesLede: requiredText(data.themesLede, "explore.themesLede"),
     themesCtaLabel: requiredText(data.themesCtaLabel, "explore.themesCtaLabel"),
-    collectionsEyebrow: requiredText(data.collectionsEyebrow, "explore.collectionsEyebrow"),
-    collectionsHeading: requiredText(data.collectionsHeading, "explore.collectionsHeading"),
-    collectionsLede: requiredText(data.collectionsLede, "explore.collectionsLede"),
     libraryEyebrow: requiredText(data.libraryEyebrow, "explore.libraryEyebrow"),
     libraryHeading: requiredText(data.libraryHeading, "explore.libraryHeading"),
     libraryLede: requiredText(data.libraryLede, "explore.libraryLede"),

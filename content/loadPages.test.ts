@@ -55,6 +55,9 @@ describe("page copy loaders", () => {
       "/try",
       "/about",
     ]);
+    expect(explore).not.toHaveProperty("collectionsEyebrow");
+    expect(explore).not.toHaveProperty("collectionsHeading");
+    expect(explore).not.toHaveProperty("collectionsLede");
     expect(library.heading).toBe("Library");
     expect(library.originalNote).toContain("optional discovery references");
     expect(tryPage.externalCtaLabel).toBe("Open MandarinOS.app");
@@ -97,6 +100,17 @@ describe("page copy loaders", () => {
       }
       expect(raw).toMatch(/get\w+PageCopy|getHomePageCopy|getStartHerePageCopy|getFooterCopy/);
     }
+  });
+
+  it("does not expose Explore collection-section fields in Keystatic", () => {
+    const config = readFileSync(path.join(root, "keystatic.config.ts"), "utf8");
+    const exploreSection = config.slice(
+      config.indexOf("explorePage: singleton("),
+      config.indexOf("libraryPage: singleton(")
+    );
+    expect(exploreSection).not.toContain("collectionsEyebrow");
+    expect(exploreSection).not.toContain("collectionsHeading");
+    expect(exploreSection).not.toContain("collectionsLede");
   });
 
   it("exposes page singletons in Keystatic", () => {

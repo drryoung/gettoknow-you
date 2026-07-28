@@ -20,7 +20,7 @@ pathways:
     text: A short curated introduction for first-time visitors.
   - key: explore
     label: Explore
-    text: A map of themes and collections once you know where you are headed.
+    text: A map of themes once you know where you are headed.
   - key: library
     label: Library
     text: >-

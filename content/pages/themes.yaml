@@ -20,7 +20,7 @@ relatedPathways:
     text: Every published work in one place.
   - key: explore
     label: Explore
-    text: Collections and visitor pathways.
+    text: Themes and visitor pathways.
 defaultPlaceholderMessage: >-
   This room is being developed. Material will appear here as it is published.
 featuredHeading: Featured

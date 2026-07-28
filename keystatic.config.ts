@@ -348,19 +348,6 @@ export default config({
           label: "Themes CTA label",
           validation: { isRequired: true, length: { min: 1, max: 80 } },
         }),
-        collectionsEyebrow: fields.text({
-          label: "Collections eyebrow",
-          validation: { isRequired: true, length: { min: 1, max: 60 } },
-        }),
-        collectionsHeading: fields.text({
-          label: "Collections heading",
-          validation: { isRequired: true, length: { min: 1, max: 160 } },
-        }),
-        collectionsLede: fields.text({
-          label: "Collections lede",
-          multiline: true,
-          validation: { isRequired: true, length: { min: 1, max: 400 } },
-        }),
         libraryEyebrow: fields.text({
           label: "Library eyebrow",
           validation: { isRequired: true, length: { min: 1, max: 60 } },

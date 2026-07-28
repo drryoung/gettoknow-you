@@ -1,8 +1,4 @@
 import type { Metadata } from "next";
-import {
-  getListedWorks,
-  selectBrowsableCollections,
-} from "../../content/loadWorks";
 import { getNavThemes } from "../../content/loadThemes";
 import { getExplorePageCopy, getThemesPageCopy } from "../../content/loadPages";
 import { SiteHeader } from "../components/SiteHeader";
@@ -18,13 +14,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ExplorePage() {
-  const [copy, listedWorks, navThemes, themesCopy] = await Promise.all([
+  const [copy, navThemes, themesCopy] = await Promise.all([
     getExplorePageCopy(),
-    getListedWorks(),
     getNavThemes(),
     getThemesPageCopy(),
   ]);
-  const browsable = selectBrowsableCollections(listedWorks);
 
   return (
     <main>
@@ -71,26 +65,6 @@ export default async function ExplorePage() {
               {copy.themesCtaLabel}
             </a>
           </p>
-        </section>
-      ) : null}
-
-      {browsable.length > 0 ? (
-        <section className="screen shell explore-collections" aria-labelledby="collections-title">
-          <p className="eyebrow">{copy.collectionsEyebrow}</p>
-          <h2 id="collections-title" className="explore-section-title">
-            {copy.collectionsHeading}
-          </h2>
-          <p className="section-lede">{copy.collectionsLede}</p>
-          <ul className="collection-grid">
-            {browsable.map((collection) => (
-              <li key={collection.slug} className="collection-card">
-                <h3 className="collection-card__title">
-                  <a href={`/explore/${collection.slug}`}>{collection.name}</a>
-                </h3>
-                <p className="collection-card__text">{collection.description}</p>
-              </li>
-            ))}
-          </ul>
         </section>
       ) : null}
 
