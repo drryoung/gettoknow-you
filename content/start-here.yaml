@@ -1,3 +1,20 @@
+seoTitle: Start Here
+seoDescription: >-
+  Begin with the stories and ideas behind GetToKnow.You, ConversationOS, and the
+  belief that better conversations create stronger relationships.
+eyebrow: A place to begin
+heading: Start Here
+lede: GetToKnow.You explores how better conversations create stronger relationships.
+supporting: >-
+  Conversation is the mechanism. Relationships are the destination. Start with a
+  few stories and ideas that explain where this project came from and what it is
+  trying to build.
+emptyMessage: The curated Start Here sequence is still being assembled.
+nextEyebrow: What next
+nextHeading: These are the ideas behind GetToKnow.You
+nextLede: >-
+  From here, you can explore more stories, read longer pieces, or try a working
+  conversation practice through MandarinOS.
 items:
   - conversation-missed-opportunity
   - the-dunedin-checkout-success-story

@@ -137,8 +137,10 @@ function originalLinkLabel(platform: "xiaohongshu" | "instagram" | "substack"): 
 
 export function OriginallyPublished({
   original,
+  note,
 }: {
   original: Work["original"];
+  note: string;
 }) {
   const links = (
     [
@@ -161,9 +163,7 @@ export function OriginallyPublished({
       <h2 id="library-original-title" className="library-original__title">
         Originally published
       </h2>
-      <p className="library-original__note">
-        These links are optional discovery references. The lasting version lives on GetToKnow.You.
-      </p>
+      <p className="library-original__note">{note}</p>
       <ul className="library-original__links">
         {links.map((link) => (
           <li key={link.href}>

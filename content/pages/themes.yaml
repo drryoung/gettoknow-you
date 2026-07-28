@@ -1,0 +1,28 @@
+seoTitle: Themes
+seoDescription: >-
+  Editorial rooms in the GetToKnow.You commons—conversation, culture, language,
+  trust, and building the site.
+eyebrow: Public commons
+heading: Themes
+lede: >-
+  Rooms for exploring published work by thread—some already gathering material,
+  others still being framed.
+emptyMessage: Public theme rooms will appear here as they are opened.
+inDevelopmentLabel: A room in development
+relatedEyebrow: Pathways
+relatedHeading: Related pathways
+relatedPathways:
+  - key: start-here
+    label: Start Here
+    text: A guided entry into the commons.
+  - key: library
+    label: Library
+    text: Every published work in one place.
+  - key: explore
+    label: Explore
+    text: Collections and visitor pathways.
+defaultPlaceholderMessage: >-
+  This room is being developed. Material will appear here as it is published.
+featuredHeading: Featured
+moreHeading: More in this theme
+worksHeading: Works in this theme

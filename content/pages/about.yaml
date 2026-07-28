@@ -1,0 +1,46 @@
+seoTitle: About
+seoDescription: >-
+  Raymond Young, GetToKnow.You, ConversationOS, and MandarinOS—how the ecosystem
+  fits together.
+eyebrow: Founder and ecosystem
+heading: About
+lede: >-
+  GetToKnow.You is an emerging public commons for meaningful conversation and
+  relationship. It sits at the centre of a small ecosystem that is still taking
+  shape.
+ecosystemHeading: How the pieces fit
+ecosystem:
+  - label: GetToKnow.You
+    text: The umbrella mission and emerging public commons.
+  - label: ConversationOS
+    text: >-
+      The developing framework for conversations that build understanding and
+      relationships.
+  - label: MandarinOS
+    text: >-
+      The first practical application—a conversation simulator for Mandarin
+      learners.
+  - label: Raymond Young
+    text: The founder and personal voice behind the work.
+bioHeading: Raymond Young
+bioParagraphs:
+  - >-
+    Raymond’s career has crossed technology, organisations, education, China,
+    Australia, and New Zealand. GetToKnow.You grows from long experience
+    observing how people communicate—and how often they fail to understand one
+    another.
+  - >-
+    The project is not a finished community platform. It is a careful beginning:
+    a charter, a commons of curated works, and practical experiments such as
+    MandarinOS.
+links:
+  - hrefKey: mandarinos
+    label: MandarinOS.app
+  - hrefKey: try
+    label: Try ConversationOS and MandarinOS
+  - hrefKey: charter
+    label: Community Charter
+  - hrefKey: explore
+    label: Explore the commons
+  - hrefKey: meet
+    label: Meet the emerging community

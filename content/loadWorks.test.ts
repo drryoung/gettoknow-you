@@ -1422,12 +1422,15 @@ describe("works collection boundaries", () => {
 
   it("loads Explore content through the works loader without hard-coded work copy", () => {
     const page = readFileSync(path.join(root, "app/explore/page.tsx"), "utf8");
+    const exploreCopy = readFileSync(path.join(root, "content/pages/explore.yaml"), "utf8");
     const list = readFileSync(path.join(root, "app/components/WorkList.tsx"), "utf8");
     expect(page).toContain("getListedWorks");
+    expect(page).toContain("getExplorePageCopy");
     expect(page).not.toContain("getStartHereWorks");
     expect(page).not.toContain("slice(0, 3)");
     expect(page).toContain('href="/start-here"');
-    expect(page).toContain("Follow the Start Here pathway");
+    expect(page).not.toContain("Follow the Start Here pathway");
+    expect(exploreCopy).toContain("Follow the Start Here pathway");
     expect(page).toContain("selectBrowsableCollections");
     expect(page).not.toContain("Coming soon");
     expect(list).toContain("work.href");
@@ -1443,8 +1446,8 @@ describe("works collection boundaries", () => {
     const explore = readFileSync(path.join(root, "app/explore/page.tsx"), "utf8");
     expect(existsSync(path.join(root, "app/start-here/page.tsx"))).toBe(true);
     expect(page).toContain("getStartHereWorks");
+    expect(page).toContain("getStartHerePageCopy");
     expect(page).toContain("WorkList");
-    expect(page).toContain("Start Here");
     expect(page).not.toContain("In development");
     expect(page).not.toContain("coming soon");
     expect(explore).not.toContain("getStartHereWorks");

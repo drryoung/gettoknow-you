@@ -1,5 +1,6 @@
 import type { ResolvedThemePage, Theme } from "../../content/loadThemes";
 import type { Work } from "../../content/loadWorks";
+import { getThemesPageCopy } from "../../content/loadPages";
 import { LibraryGrid } from "./LibraryGrid";
 import { WorkBody } from "./WorkBody";
 
@@ -28,19 +29,24 @@ export function ThemeWorkGrid({
   works,
   showPlaceholder,
   placeholderMessage,
+  defaultPlaceholderMessage,
+  featuredHeading,
+  moreHeading,
+  worksHeading,
 }: {
   featured: Work[];
   works: Work[];
   showPlaceholder: boolean;
   placeholderMessage: string | null;
+  defaultPlaceholderMessage: string;
+  featuredHeading: string;
+  moreHeading: string;
+  worksHeading: string;
 }) {
   if (showPlaceholder) {
     return (
       <ThemePlaceholder
-        message={
-          placeholderMessage?.trim() ||
-          "This room is being developed. Material will appear here as it is published."
-        }
+        message={placeholderMessage?.trim() || defaultPlaceholderMessage}
       />
     );
   }
@@ -52,7 +58,7 @@ export function ThemeWorkGrid({
       {featured.length > 0 ? (
         <section className="theme-works" aria-labelledby="theme-featured-title">
           <h2 id="theme-featured-title" className="explore-section-title">
-            Featured
+            {featuredHeading}
           </h2>
           <LibraryGrid works={featured} emptyMessage="" />
         </section>
@@ -61,7 +67,7 @@ export function ThemeWorkGrid({
       {remaining.length > 0 || featured.length === 0 ? (
         <section className="theme-works" aria-labelledby="theme-works-title">
           <h2 id="theme-works-title" className="explore-section-title">
-            {featured.length > 0 ? "More in this theme" : "Works in this theme"}
+            {featured.length > 0 ? moreHeading : worksHeading}
           </h2>
           <LibraryGrid
             works={featured.length > 0 ? remaining : works}
@@ -73,32 +79,35 @@ export function ThemeWorkGrid({
   );
 }
 
-export function ThemeRelatedPathways() {
+export function ThemeRelatedPathways({
+  eyebrow,
+  heading,
+  pathways,
+}: {
+  eyebrow: string;
+  heading: string;
+  pathways: Array<{ href: string; label: string; text: string }>;
+}) {
   return (
     <section className="theme-pathways" aria-labelledby="theme-pathways-title">
-      <p className="eyebrow">Pathways</p>
+      <p className="eyebrow">{eyebrow}</p>
       <h2 id="theme-pathways-title" className="explore-section-title">
-        Related pathways
+        {heading}
       </h2>
       <ul className="theme-pathways__list">
-        <li>
-          <a href="/start-here">Start Here</a>
-          <p>A guided entry into the commons.</p>
-        </li>
-        <li>
-          <a href="/library">Library</a>
-          <p>Every published work in one place.</p>
-        </li>
-        <li>
-          <a href="/explore">Explore</a>
-          <p>Collections and visitor pathways.</p>
-        </li>
+        {pathways.map((pathway) => (
+          <li key={pathway.href}>
+            <a href={pathway.href}>{pathway.label}</a>
+            <p>{pathway.text}</p>
+          </li>
+        ))}
       </ul>
     </section>
   );
 }
 
-export function ThemeDetail({ theme }: { theme: ResolvedThemePage }) {
+export async function ThemeDetail({ theme }: { theme: ResolvedThemePage }) {
+  const copy = await getThemesPageCopy();
   const showPlaceholder = theme.works.length === 0;
   const cover = theme.coverImage;
 
@@ -124,9 +133,17 @@ export function ThemeDetail({ theme }: { theme: ResolvedThemePage }) {
         works={theme.works}
         showPlaceholder={showPlaceholder}
         placeholderMessage={theme.placeholderMessage}
+        defaultPlaceholderMessage={copy.defaultPlaceholderMessage}
+        featuredHeading={copy.featuredHeading}
+        moreHeading={copy.moreHeading}
+        worksHeading={copy.worksHeading}
       />
 
-      <ThemeRelatedPathways />
+      <ThemeRelatedPathways
+        eyebrow={copy.relatedEyebrow}
+        heading={copy.relatedHeading}
+        pathways={copy.relatedPathwaysWithHref}
+      />
     </article>
   );
 }

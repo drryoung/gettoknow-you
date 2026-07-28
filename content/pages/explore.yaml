@@ -1,0 +1,39 @@
+seoTitle: Explore
+seoDescription: A map of themes and collections in the GetToKnow.You public commons.
+eyebrow: Public commons
+heading: Explore
+lede: >-
+  A map of the themes and collections in GetToKnow.You—useful once you know
+  where you want to go next.
+startHereLinkLabel: New to GetToKnow.You? Follow the Start Here pathway.
+gateways:
+  - key: themes
+    label: Themes
+    text: >-
+      Editorial rooms for conversation, culture, language, trust, and building
+      the commons.
+  - key: library
+    label: Library
+    text: The complete published library—newest first.
+  - key: try
+    label: Try
+    text: Projects and practices you can put into use.
+  - key: about
+    label: About
+    text: Raymond, ConversationOS, and MandarinOS.
+themesEyebrow: Themes
+themesHeading: Rooms in the commons
+themesLede: >-
+  Each theme is an editorial room—some already gathering published work, others
+  still being framed.
+themesCtaLabel: Browse all themes
+collectionsEyebrow: Collections
+collectionsHeading: Browse by collection
+collectionsLede: >-
+  Each collection gathers published works around one thread—conversation,
+  relationships, culture, and more.
+libraryEyebrow: Library
+libraryHeading: Published works
+libraryLede: >-
+  Every published work in one place, newest first—the definitive public library.
+libraryCtaLabel: Browse the library

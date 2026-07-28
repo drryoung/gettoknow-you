@@ -20,6 +20,16 @@ export default config({
     brand: { name: "GetToKnow.You Content" },
     navigation: {
       Community: ["communityCharter", "startHere"],
+      Pages: [
+        "homePage",
+        "explorePage",
+        "libraryPage",
+        "tryPage",
+        "meetPage",
+        "aboutPage",
+        "themesPage",
+      ],
+      Site: ["siteFooter"],
       Commons: ["works", "themes"],
     },
   },
@@ -51,6 +61,27 @@ export default config({
           multiline: true,
           validation: { isRequired: true, length: { min: 1, max: 400 } },
         }),
+        pageEyebrow: fields.text({
+          label: "Page eyebrow",
+          description: "Small label above the page heading on the charter route.",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        pageHeading: fields.text({
+          label: "Page heading",
+          description: "Primary heading on the public charter page.",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        seoTitle: fields.text({
+          label: "SEO title",
+          description: "Optional browser-tab / metadata title override.",
+          validation: { length: { max: 120 } },
+        }),
+        seoDescription: fields.text({
+          label: "SEO description",
+          description: "Optional metadata description override.",
+          multiline: true,
+          validation: { length: { max: 400 } },
+        }),
         body: fields.markdoc({
           label: "Charter text",
           description:
@@ -79,11 +110,573 @@ export default config({
       path: "content/start-here",
       format: { data: "yaml" },
       schema: {
+        seoTitle: fields.text({
+          label: "SEO title",
+          validation: { isRequired: true, length: { min: 1, max: 120 } },
+        }),
+        seoDescription: fields.text({
+          label: "SEO description",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        eyebrow: fields.text({
+          label: "Eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        heading: fields.text({
+          label: "Heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        lede: fields.text({
+          label: "Lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        supporting: fields.text({
+          label: "Supporting text",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 600 } },
+        }),
+        emptyMessage: fields.text({
+          label: "Empty message",
+          description: "Shown when no Start Here works are publicly eligible.",
+          validation: { isRequired: true, length: { min: 1, max: 280 } },
+        }),
+        nextEyebrow: fields.text({
+          label: "Next section eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        nextHeading: fields.text({
+          label: "Next section heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        nextLede: fields.text({
+          label: "Next section lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
         items: fields.array(fields.text({ label: "Work slug" }), {
           label: "Sequence",
           description:
             "Ordered Start Here items by stable work slug. Use gettoknowyou-community-charter for the Community Charter Library signpost (authoritative charter text remains the Community Charter singleton). Only publicly eligible works appear; missing or ineligible slugs are skipped.",
           itemLabel: (props) => props.value || "Work slug",
+        }),
+      },
+    }),
+    homePage: singleton({
+      label: "Homepage",
+      path: "content/pages/home",
+      format: { data: "yaml" },
+      schema: {
+        seoTitle: fields.text({
+          label: "SEO title",
+          validation: { isRequired: true, length: { min: 1, max: 120 } },
+        }),
+        seoDescription: fields.text({
+          label: "SEO description",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        heroEyebrow: fields.text({
+          label: "Hero eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        heroHeading: fields.text({
+          label: "Hero heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        heroLede: fields.text({
+          label: "Hero lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        primaryCtaLabel: fields.text({
+          label: "Primary CTA label",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        secondaryCtaLabel: fields.text({
+          label: "Secondary CTA label",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        pathwaysEyebrow: fields.text({
+          label: "Pathways eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        pathwaysHeading: fields.text({
+          label: "Pathways heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        pathwaysLede: fields.text({
+          label: "Pathways lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        pathways: fields.array(
+          fields.object({
+            key: fields.text({
+              label: "Pathway key",
+              description: "Stable key used by the site frame. Do not change casually.",
+              validation: { isRequired: true, length: { min: 1, max: 60 } },
+            }),
+            label: fields.text({
+              label: "Label",
+              validation: { isRequired: true, length: { min: 1, max: 80 } },
+            }),
+            text: fields.text({
+              label: "Text",
+              multiline: true,
+              validation: { isRequired: true, length: { min: 1, max: 400 } },
+            }),
+          }),
+          {
+            label: "Pathways",
+            itemLabel: (props) => props.fields.label.value || "Pathway",
+          }
+        ),
+        featuredEyebrow: fields.text({
+          label: "Featured eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        featuredHeading: fields.text({
+          label: "Featured heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        featuredLede: fields.text({
+          label: "Featured lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        founderEyebrow: fields.text({
+          label: "Founder eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        founderHeading: fields.text({
+          label: "Founder heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        founderText: fields.text({
+          label: "Founder text",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 800 } },
+        }),
+        founderCtaLabel: fields.text({
+          label: "Founder CTA label",
+          validation: { isRequired: true, length: { min: 1, max: 80 } },
+        }),
+        charterHeading: fields.text({
+          label: "Charter heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        charterText: fields.text({
+          label: "Charter text",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        charterCtaLabel: fields.text({
+          label: "Charter CTA label",
+          validation: { isRequired: true, length: { min: 1, max: 80 } },
+        }),
+      },
+    }),
+    explorePage: singleton({
+      label: "Explore page",
+      path: "content/pages/explore",
+      format: { data: "yaml" },
+      schema: {
+        seoTitle: fields.text({
+          label: "SEO title",
+          validation: { isRequired: true, length: { min: 1, max: 120 } },
+        }),
+        seoDescription: fields.text({
+          label: "SEO description",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        eyebrow: fields.text({
+          label: "Eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        heading: fields.text({
+          label: "Heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        lede: fields.text({
+          label: "Lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        startHereLinkLabel: fields.text({
+          label: "Start Here link label",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        gateways: fields.array(
+          fields.object({
+            key: fields.text({
+              label: "Gateway key",
+              description: "Stable key used by the site frame. Do not change casually.",
+              validation: { isRequired: true, length: { min: 1, max: 60 } },
+            }),
+            label: fields.text({
+              label: "Label",
+              validation: { isRequired: true, length: { min: 1, max: 80 } },
+            }),
+            text: fields.text({
+              label: "Text",
+              multiline: true,
+              validation: { isRequired: true, length: { min: 1, max: 400 } },
+            }),
+          }),
+          {
+            label: "Gateways",
+            itemLabel: (props) => props.fields.label.value || "Gateway",
+          }
+        ),
+        themesEyebrow: fields.text({
+          label: "Themes eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        themesHeading: fields.text({
+          label: "Themes heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        themesLede: fields.text({
+          label: "Themes lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        themesCtaLabel: fields.text({
+          label: "Themes CTA label",
+          validation: { isRequired: true, length: { min: 1, max: 80 } },
+        }),
+        collectionsEyebrow: fields.text({
+          label: "Collections eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        collectionsHeading: fields.text({
+          label: "Collections heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        collectionsLede: fields.text({
+          label: "Collections lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        libraryEyebrow: fields.text({
+          label: "Library eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        libraryHeading: fields.text({
+          label: "Library heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        libraryLede: fields.text({
+          label: "Library lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        libraryCtaLabel: fields.text({
+          label: "Library CTA label",
+          validation: { isRequired: true, length: { min: 1, max: 80 } },
+        }),
+      },
+    }),
+    libraryPage: singleton({
+      label: "Library page",
+      path: "content/pages/library",
+      format: { data: "yaml" },
+      schema: {
+        seoTitle: fields.text({
+          label: "SEO title",
+          validation: { isRequired: true, length: { min: 1, max: 120 } },
+        }),
+        seoDescription: fields.text({
+          label: "SEO description",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        eyebrow: fields.text({
+          label: "Eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        heading: fields.text({
+          label: "Heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        lede: fields.text({
+          label: "Lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        emptyMessage: fields.text({
+          label: "Empty message",
+          validation: { isRequired: true, length: { min: 1, max: 280 } },
+        }),
+        originalNote: fields.text({
+          label: "Original links note",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+      },
+    }),
+    tryPage: singleton({
+      label: "Try page",
+      path: "content/pages/try",
+      format: { data: "yaml" },
+      schema: {
+        seoTitle: fields.text({
+          label: "SEO title",
+          validation: { isRequired: true, length: { min: 1, max: 120 } },
+        }),
+        seoDescription: fields.text({
+          label: "SEO description",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        eyebrow: fields.text({
+          label: "Eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        heading: fields.text({
+          label: "Heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        lede: fields.text({
+          label: "Lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        externalCtaLabel: fields.text({
+          label: "External CTA label",
+          validation: { isRequired: true, length: { min: 1, max: 80 } },
+        }),
+        emptyMessage: fields.text({
+          label: "Empty message",
+          validation: { isRequired: true, length: { min: 1, max: 280 } },
+        }),
+      },
+    }),
+    meetPage: singleton({
+      label: "Meet page",
+      path: "content/pages/meet",
+      format: { data: "yaml" },
+      schema: {
+        seoTitle: fields.text({
+          label: "SEO title",
+          validation: { isRequired: true, length: { min: 1, max: 120 } },
+        }),
+        seoDescription: fields.text({
+          label: "SEO description",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        eyebrow: fields.text({
+          label: "Eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        heading: fields.text({
+          label: "Heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        lede: fields.text({
+          label: "Lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        intentHeading: fields.text({
+          label: "Intent heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        intentText: fields.text({
+          label: "Intent text",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 600 } },
+        }),
+        charterCtaLabel: fields.text({
+          label: "Charter CTA label",
+          validation: { isRequired: true, length: { min: 1, max: 80 } },
+        }),
+        emptyMessage: fields.text({
+          label: "Empty message",
+          validation: { isRequired: true, length: { min: 1, max: 280 } },
+        }),
+      },
+    }),
+    aboutPage: singleton({
+      label: "About page",
+      path: "content/pages/about",
+      format: { data: "yaml" },
+      schema: {
+        seoTitle: fields.text({
+          label: "SEO title",
+          validation: { isRequired: true, length: { min: 1, max: 120 } },
+        }),
+        seoDescription: fields.text({
+          label: "SEO description",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        eyebrow: fields.text({
+          label: "Eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        heading: fields.text({
+          label: "Heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        lede: fields.text({
+          label: "Lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        ecosystemHeading: fields.text({
+          label: "Ecosystem heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        ecosystem: fields.array(
+          fields.object({
+            label: fields.text({
+              label: "Label",
+              validation: { isRequired: true, length: { min: 1, max: 80 } },
+            }),
+            text: fields.text({
+              label: "Text",
+              multiline: true,
+              validation: { isRequired: true, length: { min: 1, max: 400 } },
+            }),
+          }),
+          {
+            label: "Ecosystem",
+            itemLabel: (props) => props.fields.label.value || "Ecosystem item",
+          }
+        ),
+        bioHeading: fields.text({
+          label: "Bio heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        bioParagraphs: fields.array(
+          fields.text({
+            label: "Paragraph",
+            multiline: true,
+            validation: { isRequired: true, length: { min: 1, max: 800 } },
+          }),
+          {
+            label: "Bio paragraphs",
+            itemLabel: (props) =>
+              props.value ? props.value.slice(0, 48) + (props.value.length > 48 ? "…" : "") : "Paragraph",
+          }
+        ),
+        links: fields.array(
+          fields.object({
+            hrefKey: fields.text({
+              label: "Link key",
+              description: "Stable key used by the site frame. Do not change casually.",
+              validation: { isRequired: true, length: { min: 1, max: 60 } },
+            }),
+            label: fields.text({
+              label: "Label",
+              validation: { isRequired: true, length: { min: 1, max: 80 } },
+            }),
+          }),
+          {
+            label: "Links",
+            itemLabel: (props) => props.fields.label.value || "Link",
+          }
+        ),
+      },
+    }),
+    themesPage: singleton({
+      label: "Themes page",
+      path: "content/pages/themes",
+      format: { data: "yaml" },
+      schema: {
+        seoTitle: fields.text({
+          label: "SEO title",
+          validation: { isRequired: true, length: { min: 1, max: 120 } },
+        }),
+        seoDescription: fields.text({
+          label: "SEO description",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        eyebrow: fields.text({
+          label: "Eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        heading: fields.text({
+          label: "Heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        lede: fields.text({
+          label: "Lede",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
+        }),
+        emptyMessage: fields.text({
+          label: "Empty message",
+          validation: { isRequired: true, length: { min: 1, max: 280 } },
+        }),
+        inDevelopmentLabel: fields.text({
+          label: "In-development label",
+          validation: { isRequired: true, length: { min: 1, max: 80 } },
+        }),
+        relatedEyebrow: fields.text({
+          label: "Related pathways eyebrow",
+          validation: { isRequired: true, length: { min: 1, max: 60 } },
+        }),
+        relatedHeading: fields.text({
+          label: "Related pathways heading",
+          validation: { isRequired: true, length: { min: 1, max: 160 } },
+        }),
+        relatedPathways: fields.array(
+          fields.object({
+            key: fields.text({
+              label: "Pathway key",
+              description: "Stable key used by the site frame. Do not change casually.",
+              validation: { isRequired: true, length: { min: 1, max: 60 } },
+            }),
+            label: fields.text({
+              label: "Label",
+              validation: { isRequired: true, length: { min: 1, max: 80 } },
+            }),
+            text: fields.text({
+              label: "Text",
+              multiline: true,
+              validation: { isRequired: true, length: { min: 1, max: 400 } },
+            }),
+          }),
+          {
+            label: "Related pathways",
+            itemLabel: (props) => props.fields.label.value || "Pathway",
+          }
+        ),
+        defaultPlaceholderMessage: fields.text({
+          label: "Default placeholder message",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 600 } },
+        }),
+        featuredHeading: fields.text({
+          label: "Featured works heading",
+          validation: { isRequired: true, length: { min: 1, max: 80 } },
+        }),
+        moreHeading: fields.text({
+          label: "More works heading",
+          validation: { isRequired: true, length: { min: 1, max: 80 } },
+        }),
+        worksHeading: fields.text({
+          label: "Works heading",
+          validation: { isRequired: true, length: { min: 1, max: 80 } },
+        }),
+      },
+    }),
+    siteFooter: singleton({
+      label: "Site footer",
+      path: "content/site/footer",
+      format: { data: "yaml" },
+      schema: {
+        tagline: fields.text({
+          label: "Tagline",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 280 } },
         }),
       },
     }),

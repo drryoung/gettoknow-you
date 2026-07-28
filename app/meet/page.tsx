@@ -1,49 +1,41 @@
 import type { Metadata } from "next";
 import { getPathwayWorks } from "../../content/sitePathways";
+import { getMeetPageCopy } from "../../content/loadPages";
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
 import { WorkList } from "../components/WorkList";
 
-export const metadata: Metadata = {
-  title: "Meet",
-  description:
-    "The emerging GetToKnow.You community, future gatherings, and the shared Community Charter.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = await getMeetPageCopy();
+  return {
+    title: copy.seoTitle,
+    description: copy.seoDescription,
+  };
+}
 
 export default async function MeetPage() {
-  const works = await getPathwayWorks("meet");
+  const [copy, works] = await Promise.all([getMeetPageCopy(), getPathwayWorks("meet")]);
 
   return (
     <main>
       <SiteHeader current="/meet" />
 
       <section className="screen shell explore-intro" aria-labelledby="meet-title">
-        <p className="eyebrow">Community</p>
-        <h1 id="meet-title">Meet</h1>
-        <p className="explore-intro__lede">
-          GetToKnow.You exists so people can encounter and know one another more deeply. The
-          community is emerging—there is no registration form here, and no claim of live events or
-          member rooms until they truly exist.
-        </p>
+        <p className="eyebrow">{copy.eyebrow}</p>
+        <h1 id="meet-title">{copy.heading}</h1>
+        <p className="explore-intro__lede">{copy.lede}</p>
       </section>
 
       <section className="screen shell meet-intent" aria-labelledby="meet-intent-title">
-        <h2 id="meet-intent-title">What this may become</h2>
-        <p className="section-lede">
-          Over time, Meet may hold conversations, workshops, and community experiments. Until then,
-          this page is an honest place to understand the intention and the shared foundation.
-        </p>
+        <h2 id="meet-intent-title">{copy.intentHeading}</h2>
+        <p className="section-lede">{copy.intentText}</p>
         <p className="section-link">
-          <a href="/charter">Read the Community Charter</a>
+          <a href="/charter">{copy.charterCtaLabel}</a>
         </p>
       </section>
 
       <section className="screen shell explore" aria-label="Community foundations">
-        <WorkList
-          works={works}
-          emptyMessage="Community foundations will appear here as they are added to the commons."
-          primaryLabel="Open foundation"
-        />
+        <WorkList works={works} emptyMessage={copy.emptyMessage} />
       </section>
 
       <SiteFooter />

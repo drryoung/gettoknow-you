@@ -1,50 +1,42 @@
 import type { Metadata } from "next";
 import { getStartHereWorks } from "../../content/loadWorks";
+import { getStartHerePageCopy } from "../../content/loadPages";
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
 import { WorkList } from "../components/WorkList";
 
-export const metadata: Metadata = {
-  title: "Start Here",
-  description:
-    "Begin with the stories and ideas behind GetToKnow.You, ConversationOS, and the belief that better conversations create stronger relationships.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = await getStartHerePageCopy();
+  return {
+    title: copy.seoTitle,
+    description: copy.seoDescription,
+  };
+}
 
 export default async function StartHerePage() {
-  const works = await getStartHereWorks();
+  const [copy, works] = await Promise.all([getStartHerePageCopy(), getStartHereWorks()]);
 
   return (
     <main>
       <SiteHeader current="/start-here" />
 
       <section className="screen shell explore-intro" aria-labelledby="start-here-title">
-        <p className="eyebrow">A place to begin</p>
-        <h1 id="start-here-title">Start Here</h1>
-        <p className="explore-intro__lede">
-          GetToKnow.You explores how better conversations create stronger relationships.
-        </p>
-        <p className="section-lede">
-          Conversation is the mechanism. Relationships are the destination. Start with a few stories
-          and ideas that explain where this project came from and what it is trying to build.
-        </p>
+        <p className="eyebrow">{copy.eyebrow}</p>
+        <h1 id="start-here-title">{copy.heading}</h1>
+        <p className="explore-intro__lede">{copy.lede}</p>
+        <p className="section-lede">{copy.supporting}</p>
       </section>
 
       <section className="screen shell explore" aria-label="Curated Start Here works">
-        <WorkList
-          works={works}
-          emptyMessage="The curated Start Here sequence is still being assembled."
-        />
+        <WorkList works={works} emptyMessage={copy.emptyMessage} />
       </section>
 
       <section className="screen shell explore-archive" aria-labelledby="start-here-next-title">
-        <p className="eyebrow">What next</p>
+        <p className="eyebrow">{copy.nextEyebrow}</p>
         <h2 id="start-here-next-title" className="explore-section-title">
-          These are the ideas behind GetToKnow.You
+          {copy.nextHeading}
         </h2>
-        <p className="section-lede">
-          From here, you can explore more stories, read longer pieces, or try a working conversation
-          practice through MandarinOS.
-        </p>
+        <p className="section-lede">{copy.nextLede}</p>
         <p className="welcome-hero__actions">
           <a className="action-link action-link--primary" href="/explore">
             Explore

@@ -1,6 +1,12 @@
 import type { Theme } from "../../content/loadThemes";
 
-export function ThemeCard({ theme }: { theme: Theme }) {
+export function ThemeCard({
+  theme,
+  inDevelopmentLabel,
+}: {
+  theme: Theme;
+  inDevelopmentLabel: string;
+}) {
   const cover = theme.coverImage;
   const inDevelopment = theme.status === "placeholder";
 
@@ -16,9 +22,7 @@ export function ThemeCard({ theme }: { theme: Theme }) {
           )}
         </div>
         <div className="theme-card__body">
-          {inDevelopment ? (
-            <p className="theme-card__status">A room in development</p>
-          ) : null}
+          {inDevelopment ? <p className="theme-card__status">{inDevelopmentLabel}</p> : null}
           <h2 className="theme-card__title">{theme.title}</h2>
           <p className="theme-card__summary">{theme.summary}</p>
         </div>
@@ -27,15 +31,27 @@ export function ThemeCard({ theme }: { theme: Theme }) {
   );
 }
 
-export function ThemeGrid({ themes }: { themes: Theme[] }) {
+export function ThemeGrid({
+  themes,
+  emptyMessage,
+  inDevelopmentLabel,
+}: {
+  themes: Theme[];
+  emptyMessage: string;
+  inDevelopmentLabel: string;
+}) {
   if (themes.length === 0) {
-    return <p className="explore-empty">Public theme rooms will appear here as they are opened.</p>;
+    return emptyMessage ? <p className="explore-empty">{emptyMessage}</p> : null;
   }
 
   return (
     <ul className="theme-grid">
       {themes.map((theme) => (
-        <ThemeCard key={theme.slug} theme={theme} />
+        <ThemeCard
+          key={theme.slug}
+          theme={theme}
+          inDevelopmentLabel={inDevelopmentLabel}
+        />
       ))}
     </ul>
   );

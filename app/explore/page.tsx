@@ -4,42 +4,26 @@ import {
   selectBrowsableCollections,
 } from "../../content/loadWorks";
 import { getNavThemes } from "../../content/loadThemes";
+import { getExplorePageCopy, getThemesPageCopy } from "../../content/loadPages";
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
 import { ThemeGrid } from "../components/ThemeGrid";
 
-export const metadata: Metadata = {
-  title: "Explore",
-  description:
-    "A map of themes and collections in the GetToKnow.You public commons.",
-};
-
-const GATEWAYS = [
-  {
-    href: "/themes",
-    label: "Themes",
-    text: "Editorial rooms for conversation, culture, language, trust, and building the commons.",
-  },
-  {
-    href: "/library",
-    label: "Library",
-    text: "The complete published library—newest first.",
-  },
-  {
-    href: "/try",
-    label: "Try",
-    text: "Projects and practices you can put into use.",
-  },
-  {
-    href: "/about",
-    label: "About",
-    text: "Raymond, ConversationOS, and MandarinOS.",
-  },
-] as const;
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = await getExplorePageCopy();
+  return {
+    title: copy.seoTitle,
+    description: copy.seoDescription,
+  };
+}
 
 export default async function ExplorePage() {
-  const listedWorks = await getListedWorks();
-  const navThemes = await getNavThemes();
+  const [copy, listedWorks, navThemes, themesCopy] = await Promise.all([
+    getExplorePageCopy(),
+    getListedWorks(),
+    getNavThemes(),
+    getThemesPageCopy(),
+  ]);
   const browsable = selectBrowsableCollections(listedWorks);
 
   return (
@@ -47,22 +31,19 @@ export default async function ExplorePage() {
       <SiteHeader current="/explore" />
 
       <section className="screen shell explore-intro" aria-labelledby="explore-title">
-        <p className="eyebrow">Public commons</p>
-        <h1 id="explore-title">Explore</h1>
-        <p className="explore-intro__lede">
-          A map of the themes and collections in GetToKnow.You—useful once you know where you want
-          to go next.
-        </p>
+        <p className="eyebrow">{copy.eyebrow}</p>
+        <h1 id="explore-title">{copy.heading}</h1>
+        <p className="explore-intro__lede">{copy.lede}</p>
         <p className="section-link">
           <a className="action-link" href="/start-here">
-            New to GetToKnow.You? Follow the Start Here pathway.
+            {copy.startHereLinkLabel}
           </a>
         </p>
       </section>
 
       <section className="screen shell explore-gateways" aria-label="Visitor pathways">
         <ul className="gateway-list">
-          {GATEWAYS.map((item) => (
+          {copy.gatewaysWithHref.map((item) => (
             <li key={item.href} className="gateway-list__item">
               <h2 className="gateway-list__title">
                 <a href={item.href}>{item.label}</a>
@@ -75,18 +56,19 @@ export default async function ExplorePage() {
 
       {navThemes.length > 0 ? (
         <section className="screen shell explore-themes" aria-labelledby="themes-title">
-          <p className="eyebrow">Themes</p>
+          <p className="eyebrow">{copy.themesEyebrow}</p>
           <h2 id="themes-title" className="explore-section-title">
-            Rooms in the commons
+            {copy.themesHeading}
           </h2>
-          <p className="section-lede">
-            Each theme is an editorial room—some already gathering published work, others still
-            being framed.
-          </p>
-          <ThemeGrid themes={navThemes} />
+          <p className="section-lede">{copy.themesLede}</p>
+          <ThemeGrid
+            themes={navThemes}
+            emptyMessage={themesCopy.emptyMessage}
+            inDevelopmentLabel={themesCopy.inDevelopmentLabel}
+          />
           <p className="section-link">
             <a className="action-link" href="/themes">
-              Browse all themes
+              {copy.themesCtaLabel}
             </a>
           </p>
         </section>
@@ -94,14 +76,11 @@ export default async function ExplorePage() {
 
       {browsable.length > 0 ? (
         <section className="screen shell explore-collections" aria-labelledby="collections-title">
-          <p className="eyebrow">Collections</p>
+          <p className="eyebrow">{copy.collectionsEyebrow}</p>
           <h2 id="collections-title" className="explore-section-title">
-            Browse by collection
+            {copy.collectionsHeading}
           </h2>
-          <p className="section-lede">
-            Each collection gathers published works around one thread—conversation, relationships,
-            culture, and more.
-          </p>
+          <p className="section-lede">{copy.collectionsLede}</p>
           <ul className="collection-grid">
             {browsable.map((collection) => (
               <li key={collection.slug} className="collection-card">
@@ -116,15 +95,13 @@ export default async function ExplorePage() {
       ) : null}
 
       <section className="screen shell explore-archive" aria-labelledby="library-title">
-        <p className="eyebrow">Library</p>
+        <p className="eyebrow">{copy.libraryEyebrow}</p>
         <h2 id="library-title" className="explore-section-title">
-          Published works
+          {copy.libraryHeading}
         </h2>
-        <p className="section-lede">
-          Every published work in one place, newest first—the definitive public library.
-        </p>
+        <p className="section-lede">{copy.libraryLede}</p>
         <a className="action-link" href="/library">
-          Browse the library
+          {copy.libraryCtaLabel}
         </a>
       </section>
 

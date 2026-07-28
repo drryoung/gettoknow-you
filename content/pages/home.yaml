@@ -1,0 +1,54 @@
+seoTitle: GetToKnow.You — Better conversations, deeper relationships
+seoDescription: >-
+  A public commons for meaningful conversation and relationship—ideas to read,
+  things to try, and an emerging community.
+heroEyebrow: GetToKnow.You
+heroHeading: Get to know someone.
+heroLede: >-
+  Better conversations can help us understand one another and build
+  relationships that matter—across language, culture, work, and everyday life.
+primaryCtaLabel: Start Here
+secondaryCtaLabel: Explore GetToKnow.You
+pathwaysEyebrow: Where to begin
+pathwaysHeading: Five ways in
+pathwaysLede: >-
+  Whether you arrived from social media, MandarinOS, or a personal
+  recommendation, start wherever feels natural.
+pathways:
+  - key: start-here
+    label: Start Here
+    text: A short curated introduction for first-time visitors.
+  - key: explore
+    label: Explore
+    text: A map of themes and collections once you know where you are headed.
+  - key: library
+    label: Library
+    text: >-
+      The complete published library—essays, stories, summaries, and videos
+      hosted here.
+  - key: try
+    label: Try
+    text: MandarinOS and other practical conversation projects you can put into use.
+  - key: about
+    label: About
+    text: >-
+      Raymond Young, why he is building GetToKnow.You, and how ConversationOS
+      and MandarinOS fit together.
+featuredEyebrow: From the commons
+featuredHeading: Featured
+featuredLede: >-
+  A couple of published pieces worth knowing about—then follow Start Here for
+  the full introduction.
+founderEyebrow: The founder
+founderHeading: Raymond Young
+founderText: >-
+  Raymond is building GetToKnow.You from a career that has crossed technology,
+  organisations, education, China, Australia, and New Zealand—and from long
+  experience watching how people communicate, and how often they fail to
+  understand one another.
+founderCtaLabel: About Raymond and the ecosystem
+charterHeading: Community Charter
+charterText: >-
+  The Community Charter sets out how we hope to treat one another as this
+  commons grows.
+charterCtaLabel: Read the Community Charter

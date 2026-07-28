@@ -1,9 +1,13 @@
-export function SiteFooter({ note }: { note?: string }) {
+import { getFooterCopy } from "../../content/loadPages";
+
+export async function SiteFooter({ note }: { note?: string }) {
+  const copy = await getFooterCopy();
+
   return (
     <footer className="footer shell">
       <div>
         <b>GetToKnow.You</b>
-        <p>A public commons for meaningful conversation and relationship.</p>
+        <p>{copy.tagline}</p>
       </div>
       <nav className="footer-nav" aria-label="Footer">
         <a href="/start-here">Start Here</a>

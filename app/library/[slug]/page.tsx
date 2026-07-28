@@ -6,6 +6,7 @@ import {
   getRelatedWorks,
 } from "../../../content/loadWorks";
 import { resolveThemesForWork } from "../../../content/loadThemes";
+import { getLibraryPageCopy } from "../../../content/loadPages";
 import { distributionLinkLabel } from "../../../content/platforms";
 import { SITE_URL } from "../../../content/site";
 import { SiteHeader } from "../../components/SiteHeader";
@@ -59,6 +60,7 @@ export default async function LibraryItemPage({ params }: PageProps) {
 
   const related = await getRelatedWorks(work, 3);
   const themes = await resolveThemesForWork(work.themes);
+  const libraryCopy = await getLibraryPageCopy();
   const cover = work.coverImage;
   const alsoAvailable = supplementaryDistributionLinks(work);
 
@@ -93,7 +95,7 @@ export default async function LibraryItemPage({ params }: PageProps) {
 
         {work.body ? <WorkBody body={work.body} /> : null}
 
-        <OriginallyPublished original={work.original} />
+        <OriginallyPublished original={work.original} note={libraryCopy.originalNote} />
 
         {alsoAvailable.length > 0 ? (
           <section className="library-original" aria-labelledby="library-also-title">
