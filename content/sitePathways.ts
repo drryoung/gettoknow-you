@@ -11,7 +11,7 @@ export type PathwaySection = "try" | "meet";
 
 /** Approved slug → section assignments for Try / Meet surfaces. */
 export const PATHWAY_SLUGS: Readonly<Record<PathwaySection, readonly string[]>> = {
-  try: ["mandarinos", "conversationos"],
+  try: ["mandarinos"],
   meet: ["gettoknowyou-community-charter"],
 };
 

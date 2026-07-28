@@ -4,7 +4,6 @@ import {
   selectBrowsableCollections,
 } from "../../content/loadWorks";
 import { getNavThemes } from "../../content/loadThemes";
-import { COLLECTIONS } from "../../content/collections";
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
 import { ThemeGrid } from "../components/ThemeGrid";
@@ -42,10 +41,6 @@ export default async function ExplorePage() {
   const listedWorks = await getListedWorks();
   const navThemes = await getNavThemes();
   const browsable = selectBrowsableCollections(listedWorks);
-  const browsableSlugs = new Set(browsable.map((collection) => collection.slug));
-  const futureCollections = COLLECTIONS.filter(
-    (collection) => !browsableSlugs.has(collection.slug)
-  );
 
   return (
     <main>
@@ -108,36 +103,15 @@ export default async function ExplorePage() {
             culture, and more.
           </p>
           <ul className="collection-grid">
-            {browsable.map((collection) => {
-              const count = listedWorks.filter((work) =>
-                work.topics.includes(collection.slug)
-              ).length;
-              return (
-                <li key={collection.slug} className="collection-card">
-                  <h3 className="collection-card__title">
-                    <a href={`/explore/${collection.slug}`}>{collection.name}</a>
-                  </h3>
-                  <p className="collection-card__text">{collection.description}</p>
-                  <p className="collection-card__count">
-                    {count} item{count === 1 ? "" : "s"}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-
-      {futureCollections.length > 0 ? (
-        <section className="screen shell explore-future" aria-label="Collections in preparation">
-          <p className="section-lede explore-future__note">
-            {futureCollections.map((collection, index) => (
-              <span key={collection.slug}>
-                {index > 0 ? " · " : null}
-                {collection.name} — more material is being prepared.
-              </span>
+            {browsable.map((collection) => (
+              <li key={collection.slug} className="collection-card">
+                <h3 className="collection-card__title">
+                  <a href={`/explore/${collection.slug}`}>{collection.name}</a>
+                </h3>
+                <p className="collection-card__text">{collection.description}</p>
+              </li>
             ))}
-          </p>
+          </ul>
         </section>
       ) : null}
 

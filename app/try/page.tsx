@@ -21,8 +21,8 @@ export default async function TryPage() {
         <p className="eyebrow">Practice and projects</p>
         <h1 id="try-title">Try</h1>
         <p className="explore-intro__lede">
-          Practical experiences you can put into use. MandarinOS is available today. ConversationOS
-          and future workshops remain in development—honestly labelled, without invented offers.
+          Practical experiences you can put into use. MandarinOS is available today as a working
+          conversation practice.
         </p>
         <p className="section-link">
           <a href="https://www.mandarinos.app/" rel="noopener noreferrer">

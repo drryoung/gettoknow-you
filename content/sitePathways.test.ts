@@ -52,7 +52,7 @@ function stubWork(slug: string): Work {
 
 describe("sitePathways", () => {
   it("maps approved slugs into Try and Meet without inventing titles", () => {
-    expect(PATHWAY_SLUGS.try).toEqual(["mandarinos", "conversationos"]);
+    expect(PATHWAY_SLUGS.try).toEqual(["mandarinos"]);
     expect(PATHWAY_SLUGS.meet).toEqual(["gettoknowyou-community-charter"]);
   });
 

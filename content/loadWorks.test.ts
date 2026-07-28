@@ -2,7 +2,9 @@ import {
   countPublicWorksInCollection,
   getArchiveWorks,
   getListedWorks,
+  getPublicLibraryWorks,
   getPublicWorkDetail,
+  getRelatedWorks,
   getStartHereWorks,
   hasUsablePublicDestination,
   inferContentMode,
@@ -1125,6 +1127,24 @@ describe("getListedWorks", () => {
     expect(bySlug["the-second-question"]).toBeUndefined();
     expect(bySlug["better-conversations"]).toBeUndefined();
     expect(bySlug.conversationos).toBeUndefined();
+    expect(bySlug["cross-cultural-stories"]).toBeUndefined();
+    expect(bySlug["the-coffee-date-that-went-silent"]).toBeUndefined();
+    expect(bySlug["trust-and-human-connection"]).toBeUndefined();
+  });
+
+  it("exposes only genuinely published public works in the Library", async () => {
+    const works = await getPublicLibraryWorks();
+    const slugs = works.map((w) => w.slug).sort();
+    expect(slugs).toEqual(
+      [
+        "conversation-missed-opportunity",
+        "gettoknowyou-community-charter",
+        "mandarinos",
+        "the-dunedin-checkout-success-story",
+      ].sort()
+    );
+    expect(works.every((w) => w.publicationState === "published")).toBe(true);
+    expect(works.every((w) => w.status === "listed")).toBe(true);
   });
 
   it("loads legacy records without origin/canonicalPlatform via normalizeWork", () => {
@@ -1293,7 +1313,7 @@ describe("getStartHereWorks", () => {
     expect(slugs.has("trust-and-human-connection")).toBe(false);
   });
 
-  it("orders Start Here as founder, Dunedin checkout, MandarinOS, then charter", async () => {
+  it("keeps Start Here on the singleton sequence of published works only", async () => {
     const works = await getStartHereWorks();
     expect(works.map((w) => w.slug)).toEqual([
       "conversation-missed-opportunity",
@@ -1303,21 +1323,22 @@ describe("getStartHereWorks", () => {
     ]);
     expect(works[0]?.title).toBe("Conversation — Missed Teenage Opportunity");
     expect(works[1]?.title).toBe("Conversations - The Dunedin Checkout Success Story");
-    expect(works[works.length - 1]?.slug).toBe("gettoknowyou-community-charter");
-    expect(works.filter((w) => w.slug === "gettoknowyou-community-charter")).toHaveLength(1);
+    expect(works.every((w) => w.publicationState === "published")).toBe(true);
     expect(works.map((w) => w.href)).toEqual([
       "/library/conversation-missed-opportunity",
       "/library/the-dunedin-checkout-success-story",
       "/library/mandarinos",
       "/charter",
     ]);
-    expect(
-      works.every(
-        (w) =>
-          !/instagram\.com|xiaohongshu\.com/i.test(w.href) &&
-          !/^https?:\/\//i.test(w.href)
-      )
-    ).toBe(true);
+  });
+
+  it("hides Related content when no eligible public peers exist", async () => {
+    const detail = await getPublicWorkDetail("mandarinos");
+    expect(detail).not.toBeNull();
+    const related = await getRelatedWorks(detail!, 3);
+    expect(related.every((w) => w.publicationState === "published")).toBe(true);
+    const relatedUi = readFileSync(path.join(root, "app/components/LibraryDetail.tsx"), "utf8");
+    expect(relatedUi).toContain("if (works.length === 0) return null");
   });
 
   it("stores Start Here order in a singleton rather than per-work fields", () => {
