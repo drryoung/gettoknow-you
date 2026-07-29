@@ -772,8 +772,7 @@ export default config({
         date: fields.date({
           label: "Added date",
           description:
-            "Date this record was added to the commons (not necessarily a publication date).",
-          validation: { isRequired: true },
+            "Date this record was added to the commons (not necessarily a publication date). Leave blank for new drafts until the added date is known — do not guess.",
         }),
         publishedDate: fields.date({
           label: "Published date",

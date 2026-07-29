@@ -536,7 +536,7 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
   const title = input.title?.trim();
   const summary = input.summary?.trim();
   const type = input.type?.trim() ?? "";
-  const date = input.date?.trim();
+  const date = input.date?.trim() || "";
   const publishedDate = input.publishedDate?.trim() || null;
   const publicationState = input.publicationState?.trim() ?? "";
   const status = input.status?.trim() ?? "";
@@ -547,7 +547,13 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
     hasBody,
   });
 
-  if (!title || !summary || !date) return null;
+  if (!title || !summary) return null;
+  if (
+    !date &&
+    !(status === "draft" && publicationState === "developing")
+  ) {
+    return null;
+  }
   if (!isWorkType(type) || !isWorkStatus(status) || !isPublicationState(publicationState)) {
     return null;
   }

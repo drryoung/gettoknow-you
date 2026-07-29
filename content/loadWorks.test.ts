@@ -1363,9 +1363,9 @@ describe("getStartHereWorks", () => {
     const { workPrimaryAction, workTitleHref } = await import("../app/components/WorkList");
     const works = await getStartHereWorks();
     const checkout = works.find((w) => w.slug === "the-dunedin-checkout-success-story");
-    expect(checkout?.video).toBe("/media/posts/Checkout-chick-successful-conversation.mp4");
+    expect(checkout?.video).toBe("/media/posts/Checkout-Chick-Successful-Conversation.mp4");
     expect(
-      existsSync(path.join(root, "public/media/posts/Checkout-chick-successful-conversation.mp4"))
+      existsSync(path.join(root, "public/media/posts/Checkout-Chick-Successful-Conversation.mp4"))
     ).toBe(true);
     expect(workTitleHref(checkout!)).toBe("/library/the-dunedin-checkout-success-story");
     expect(workPrimaryAction(checkout!)).toEqual({
@@ -1596,4 +1596,147 @@ describe("works collection boundaries", () => {
     expect(layout).toContain("metadataBase");
     expect(layout).toContain("SITE_URL");
   });
+
+  it("maps every uploaded post video to exactly one work record", async () => {
+    const videoExt = /\.(mp4|mov|m4v|webm)$/i;
+    const postsDir = path.join(root, "public/media/posts");
+    const videoFiles = readdirSync(postsDir)
+      .filter((name) => videoExt.test(name))
+      .sort();
+
+    expect(videoFiles.length).toBeGreaterThan(0);
+
+    const worksDir = path.join(root, "content/works");
+    const videoPathsFromRecords = new Map<string, string>();
+    for (const file of readdirSync(worksDir)) {
+      if (!file.endsWith(".mdoc")) continue;
+      const raw = readFileSync(path.join(worksDir, file), "utf8");
+      const match = raw.match(/^video:\s*(.+)$/m);
+      if (!match) continue;
+      const videoPath = match[1].trim().replace(/^['"]|['"]$/g, "");
+      if (!videoPath.startsWith("/media/posts/")) continue;
+      expect(
+        videoPathsFromRecords.has(videoPath),
+        `duplicate video path ${videoPath}`
+      ).toBe(false);
+      videoPathsFromRecords.set(videoPath, file);
+    }
+
+    for (const filename of videoFiles) {
+      const publicPath = `/media/posts/${filename}`;
+      expect(
+        videoPathsFromRecords.has(publicPath),
+        `missing or case-mismatched work record for ${publicPath} — ` +
+          `found ${[...videoPathsFromRecords.keys()].join(", ") || "none"}`
+      ).toBe(true);
+      expect(existsSync(path.join(postsDir, filename))).toBe(true);
+    }
+
+    for (const [recordedPath, recordFile] of videoPathsFromRecords) {
+      const basename = recordedPath.slice("/media/posts/".length);
+      expect(
+        videoFiles.includes(basename),
+        `record ${recordFile} references missing file ${recordedPath}`
+      ).toBe(true);
+    }
+  });
+
+  it("keeps generated post-video drafts off public surfaces", async () => {
+    const draftVideoSlugs = [
+      "just-speak",
+      "outsider",
+      "real-time-language-training-needed",
+      "vocab-not-enough",
+      "tried-everything-but-still-can-t-speak",
+    ];
+    const placeholderSummary = "Add summary in Keystatic before publication.";
+    const stubFiles = [
+      "just-speak.mdoc",
+      "outsider.mdoc",
+      "real-time-language-training-needed.mdoc",
+      "vocab-not-enough.mdoc",
+    ];
+    for (const file of stubFiles) {
+      const raw = readFileSync(path.join(root, "content/works", file), "utf8");
+      expect(raw).toContain(`summary: ${placeholderSummary}`);
+      expect(raw).not.toMatch(/^date:/m);
+      expect(raw).not.toMatch(/^publishedDate:/m);
+    }
+
+    const works = await readAllWorksForTest();
+    for (const slug of draftVideoSlugs) {
+      const work = works.find((w) => w.slug === slug);
+      expect(work, `expected draft work ${slug}`).toBeTruthy();
+      expect(work?.publicationState).toBe("developing");
+      expect(work?.status).toBe("draft");
+      expect(work?.featured).toBe(false);
+      expect(isPubliclyEligible(work!)).toBe(false);
+      expect(await getPublicWorkDetail(slug)).toBeNull();
+    }
+  });
+
+  it("allows draft developing works without an added date", () => {
+    const result = normalizeWork({
+      slug: "draft-no-date",
+      title: "Draft No Date",
+      summary: LONG_SUMMARY,
+      type: "video",
+      publicationState: "developing",
+      status: "draft",
+      video: "/media/posts/example.mp4",
+    });
+    expect(result?.date).toBe("");
+    expect(isPubliclyEligible(result!)).toBe(false);
+  });
+
+  it("still requires an added date for listed or published-bound works", () => {
+    expect(
+      normalizeWork({
+        slug: "listed-no-date",
+        title: "Listed No Date",
+        summary: LONG_SUMMARY,
+        type: "video",
+        publicationState: "developing",
+        status: "listed",
+      })
+    ).toBeNull();
+  });
 });
+
+async function readAllWorksForTest() {
+  const { createReader } = await import("@keystatic/core/reader");
+  const keystaticConfig = (await import("../keystatic.config")).default;
+  const reader = createReader(root, keystaticConfig);
+  const entries = await reader.collections.works.all();
+  const { normalizeWork } = await import("./loadWorks");
+  const works = [];
+  for (const { slug, entry } of entries) {
+    let hasBody = false;
+    try {
+      const bodyEntry = await entry.body();
+      hasBody = Boolean(bodyEntry?.node);
+    } catch {
+      hasBody = false;
+    }
+    const input = {
+      slug,
+      title: entry.title,
+      summary: entry.summary,
+      type: entry.type,
+      contentMode: entry.contentMode,
+      date: entry.date,
+      publishedDate: entry.publishedDate,
+      publicationState: entry.publicationState,
+      status: entry.status,
+      hasBody,
+      video: entry.video,
+      featured: entry.featured,
+      topics: entry.topics,
+      themes: entry.themes,
+      distributionLinks: entry.distributionLinks,
+    };
+    const work = normalizeWork(input as Parameters<typeof normalizeWork>[0]);
+    if (work) works.push(work);
+  }
+  return works;
+}
