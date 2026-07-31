@@ -23,4 +23,4 @@ Do not embed Xiaohongshu or Instagram players. Social platforms remain optional 
 
 ## Action note — Dunedin checkout video
 
-Hosted path: `/media/posts/Checkout-chick-successful-conversation.mp4` (H.264/AAC MP4).
+Hosted path: `/media/posts/Checkout-Chick-Successful-Conversation.mp4` (H.264/AAC MP4).
