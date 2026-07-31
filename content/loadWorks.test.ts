@@ -1,5 +1,6 @@
 import {
   countPublicWorksInCollection,
+  diagnoseWorkEligibility,
   getArchiveWorks,
   getListedWorks,
   getPublicLibraryWorks,
@@ -1133,6 +1134,10 @@ describe("getListedWorks", () => {
   });
 
   it("exposes only genuinely published public works in the Library", async () => {
+    // This reflects Raymond's current deliberate Listed + Published edits,
+    // including the video works corrected from Hosted to Summary (see
+    // "reflects corrected contentMode for video works" below) — not an
+    // older, now-obsolete fixed count.
     const works = await getPublicLibraryWorks();
     const slugs = works.map((w) => w.slug).sort();
     expect(slugs).toEqual(
@@ -1140,7 +1145,11 @@ describe("getListedWorks", () => {
         "conversation-missed-opportunity",
         "gettoknowyou-community-charter",
         "mandarinos",
+        "outsider",
+        "real-time-language-training-needed",
         "the-dunedin-checkout-success-story",
+        "tried-everything-but-still-can-t-speak",
+        "vocab-not-enough",
       ].sort()
     );
     expect(works.every((w) => w.publicationState === "published")).toBe(true);
@@ -1641,35 +1650,66 @@ describe("works collection boundaries", () => {
     }
   });
 
-  it("keeps generated post-video drafts off public surfaces", async () => {
-    const draftVideoSlugs = [
-      "just-speak",
-      "outsider",
+  it("reflects Raymond's corrected contentMode for video works", async () => {
+    // Native video alone never satisfies Hosted (a substantive Markdoc body
+    // is required). These video-only records carry a substantive summary
+    // and an empty body, so Summary is the correct mode and they are now
+    // eligible; the two records below remain excluded because they are
+    // genuinely incomplete, independent of contentMode.
+    const summaryModeVideoSlugs = [
       "real-time-language-training-needed",
       "vocab-not-enough",
       "tried-everything-but-still-can-t-speak",
+      "the-dunedin-checkout-success-story",
     ];
-    const placeholderSummary = "Add summary in Keystatic before publication.";
-    const stubFiles = [
-      "just-speak.mdoc",
-      "outsider.mdoc",
-      "real-time-language-training-needed.mdoc",
-      "vocab-not-enough.mdoc",
-    ];
-    for (const file of stubFiles) {
-      const raw = readFileSync(path.join(root, "content/works", file), "utf8");
-      expect(raw).toContain(`summary: ${placeholderSummary}`);
-      expect(raw).not.toMatch(/^date:/m);
-      expect(raw).not.toMatch(/^publishedDate:/m);
+    const works = await readAllWorksForTest();
+    for (const slug of summaryModeVideoSlugs) {
+      const work = works.find((w) => w.slug === slug);
+      expect(work, `expected work ${slug}`).toBeTruthy();
+      expect(work?.contentMode).toBe("summary");
+      expect(work?.hasBody).toBe(false);
+      expect(isPubliclyEligible(work!)).toBe(true);
+      expect(await getPublicWorkDetail(slug)).not.toBeNull();
     }
 
+    // Outsider keeps Hosted because its body is genuinely substantive.
+    const outsider = works.find((w) => w.slug === "outsider");
+    expect(outsider?.contentMode).toBe("hosted");
+    expect(outsider?.hasBody).toBe(true);
+    expect(isPubliclyEligible(outsider!)).toBe(true);
+
+    // Just Speaking still carries a placeholder summary — genuinely
+    // incomplete, so it correctly fails to normalize into a public work,
+    // regardless of contentMode.
+    expect(works.find((w) => w.slug === "just-speak")).toBeUndefined();
+    expect(await getPublicWorkDetail("just-speak")).toBeNull();
+
+    // The Coffee Date has no video field yet ("the video itself is still
+    // being prepared" per its own summary) — Hosted with an empty body
+    // stays excluded rather than being prematurely published.
+    expect(works.find((w) => w.slug === "the-coffee-date-that-went-silent")).toBeUndefined();
+    expect(await getPublicWorkDetail("the-coffee-date-that-went-silent")).toBeNull();
+
+    const { getWorkEligibilityReports } = await import("./loadWorks");
+    const reports = await getWorkEligibilityReports();
+    const justSpeakReport = reports.find((r) => r.slug === "just-speak");
+    expect(justSpeakReport?.eligible).toBe(false);
+    expect(justSpeakReport?.reasons.join(" ")).toContain("Hosted");
+    const coffeeDateReport = reports.find((r) => r.slug === "the-coffee-date-that-went-silent");
+    expect(coffeeDateReport?.eligible).toBe(false);
+    expect(coffeeDateReport?.reasons.join(" ")).toContain("Hosted");
+  });
+
+  it("keeps orphan-video draft records off public surfaces", async () => {
+    const orphanVideoSlugs = ["conversation-failed-adult-me", "conversation-failed-teenage-me"];
     const works = await readAllWorksForTest();
-    for (const slug of draftVideoSlugs) {
+    for (const slug of orphanVideoSlugs) {
       const work = works.find((w) => w.slug === slug);
       expect(work, `expected draft work ${slug}`).toBeTruthy();
       expect(work?.publicationState).toBe("developing");
       expect(work?.status).toBe("draft");
       expect(work?.featured).toBe(false);
+      expect(work?.summary).toBe("Add summary in Keystatic before publication.");
       expect(isPubliclyEligible(work!)).toBe(false);
       expect(await getPublicWorkDetail(slug)).toBeNull();
     }
@@ -1703,18 +1743,182 @@ describe("works collection boundaries", () => {
   });
 });
 
+describe("diagnoseWorkEligibility", () => {
+  it("reuses the authoritative eligibility rules rather than a second implementation", async () => {
+    const source = readFileSync(path.join(root, "content/loadWorks.ts"), "utf8");
+    const fnBody = source.slice(
+      source.indexOf("export function diagnoseWorkEligibility"),
+      source.indexOf("\n}", source.indexOf("export function diagnoseWorkEligibility"))
+    );
+    expect(fnBody).toContain("buildWorkRecord(input)");
+    expect(fnBody).toContain("isPublishedContentValid(work)");
+    expect(fnBody).toContain("isPubliclyEligible(work)");
+  });
+
+  it("explains a Hosted work with an empty body without leaking body content", () => {
+    const report = diagnoseWorkEligibility({
+      slug: "hosted-empty",
+      title: "Hosted Empty",
+      summary: LONG_SUMMARY,
+      type: "video",
+      contentMode: "hosted",
+      hasBody: false,
+      date: "2026-07-25",
+      publicationState: "published",
+      status: "listed",
+      video: "/media/posts/example.mp4",
+    });
+    expect(report.eligible).toBe(false);
+    expect(report.reasons.join(" ")).toContain("Content mode is Hosted");
+    expect(report.reasons.join(" ")).toContain("body is currently empty");
+  });
+
+  it("reports no reasons for a genuinely eligible work", () => {
+    const report = diagnoseWorkEligibility({
+      slug: "hosted-complete",
+      title: "Hosted Complete",
+      summary: LONG_SUMMARY,
+      type: "essay",
+      contentMode: "hosted",
+      hasBody: true,
+      date: "2026-07-25",
+      publicationState: "published",
+      status: "listed",
+    });
+    expect(report.eligible).toBe(true);
+    expect(report.reasons).toEqual([]);
+  });
+
+  it("explains a not-yet-published developing work", () => {
+    const report = diagnoseWorkEligibility({
+      slug: "developing-work",
+      title: "Developing Work",
+      summary: LONG_SUMMARY,
+      type: "video",
+      status: "listed",
+      publicationState: "developing",
+      date: "2026-07-25",
+    });
+    expect(report.eligible).toBe(false);
+    expect(report.reasons.join(" ")).toContain('Editorial state is "developing", not Published');
+  });
+
+  it("explains a work missing required fields before it can even be built", () => {
+    const report = diagnoseWorkEligibility({ slug: "incomplete" });
+    expect(report.eligible).toBe(false);
+    expect(report.reasons.length).toBeGreaterThan(0);
+    expect(report.reasons.join(" ")).toContain("Title is missing");
+    expect(report.reasons.join(" ")).toContain("Summary is missing");
+  });
+
+  it("diagnoses every real Work record without throwing and without leaking draft bodies", async () => {
+    const { getWorkEligibilityReports } = await import("./loadWorks");
+    const reports = await getWorkEligibilityReports();
+    expect(reports.length).toBeGreaterThan(0);
+    for (const report of reports) {
+      expect(typeof report.slug).toBe("string");
+      expect(typeof report.eligible).toBe("boolean");
+      if (!report.eligible) {
+        expect(report.reasons.length).toBeGreaterThan(0);
+      }
+      // Reasons are structural explanations only — never raw body/markdoc text.
+      for (const reason of report.reasons) {
+        expect(reason).not.toMatch(/\n\n/);
+      }
+    }
+  });
+
+  it("flags the checkout work as excluded while its content mode is Hosted with no body (Raymond's in-progress edit)", async () => {
+    const { getWorkEligibilityReports } = await import("./loadWorks");
+    const reports = await getWorkEligibilityReports();
+    const checkout = reports.find((r) => r.slug === "the-dunedin-checkout-success-story");
+    expect(checkout).toBeTruthy();
+    if (checkout && checkout.contentMode === "hosted" && !checkout.eligible) {
+      expect(checkout.reasons.join(" ")).toContain("Content mode is Hosted");
+    }
+  });
+});
+
+describe("Keystatic Works editor structure", () => {
+  const config = readFileSync(path.join(root, "keystatic.config.ts"), "utf8");
+  const worksSection = config.slice(
+    config.indexOf("works: collection("),
+    config.indexOf("themes: collection(")
+  );
+
+  it("uses the content entry layout so the body does not push metadata down", () => {
+    expect(worksSection).toContain('entryLayout: "content"');
+    expect(worksSection).toContain('format: { contentField: "body" }');
+  });
+
+  it("places publication-critical fields before secondary metadata", () => {
+    const criticalFields = ["status:", "publicationState:", "date:", "publishedDate:", "type:", "contentMode:", "summary:", "featured:"];
+    const secondaryFields = ["themes:", "topics:", "series:", "distributionLinks:", "seoCanonicalUrl:"];
+    const criticalIndexes = criticalFields.map((f) => worksSection.indexOf(f));
+    const secondaryIndexes = secondaryFields.map((f) => worksSection.indexOf(f));
+    expect(criticalIndexes.every((i) => i > -1)).toBe(true);
+    expect(secondaryIndexes.every((i) => i > -1)).toBe(true);
+    const lastCritical = Math.max(...criticalIndexes);
+    const firstSecondary = Math.min(...secondaryIndexes);
+    expect(lastCritical).toBeLessThan(firstSecondary);
+  });
+
+  it("documents the publication checklist and Hosted-vs-Summary distinction in field descriptions", () => {
+    expect(worksSection).toContain("CHECKLIST");
+    expect(worksSection).toContain("Website visibility is Listed");
+    expect(worksSection).toContain("Editorial state (below) is Published");
+    expect(worksSection).toContain("Added date is set");
+    const contentModeSection = worksSection.slice(worksSection.indexOf('contentMode: fields.select('));
+    const contentModeDescription = contentModeSection.slice(0, contentModeSection.indexOf("}),"));
+    expect(contentModeDescription).toContain("Native video alone does NOT satisfy Hosted");
+  });
+
+  it("clarifies that Added date and Published date are distinct", () => {
+    const dateSection = worksSection.slice(
+      worksSection.indexOf("date: fields.date("),
+      worksSection.indexOf("publishedDate: fields.date(")
+    );
+    expect(dateSection).toContain("Required before a Listed + Published work can appear publicly");
+    const publishedDateSection = worksSection.slice(
+      worksSection.indexOf("publishedDate: fields.date("),
+      worksSection.indexOf("type: fields.select(")
+    );
+    expect(publishedDateSection).toContain("Optional original publication date");
+  });
+
+  it("keeps the collection list columns focused on publication comparison", () => {
+    expect(worksSection).toContain(
+      'columns: ["status", "publicationState", "contentMode", "type", "date", "featured"]'
+    );
+  });
+
+  it("keeps publication-critical fields flat (no conditional/object wrapper) so existing frontmatter stays valid", () => {
+    // Wrapping status/publicationState/date/contentMode in fields.object or
+    // fields.conditional would nest them under a new key, changing the
+    // stored YAML shape and breaking every existing .mdoc record's
+    // frontmatter. fields.object is still used for distributionLinks' array
+    // items, which is a pre-existing, unrelated, safe pattern.
+    expect(worksSection).not.toContain("fields.conditional(");
+    const essentialsSection = worksSection.slice(
+      worksSection.indexOf("title: fields.slug("),
+      worksSection.indexOf("keyTakeaway: fields.text(")
+    );
+    expect(essentialsSection).not.toContain("fields.object(");
+  });
+});
+
 async function readAllWorksForTest() {
   const { createReader } = await import("@keystatic/core/reader");
   const keystaticConfig = (await import("../keystatic.config")).default;
   const reader = createReader(root, keystaticConfig);
   const entries = await reader.collections.works.all();
-  const { normalizeWork } = await import("./loadWorks");
+  const { normalizeWork, markdocNodeHasContent } = await import("./loadWorks");
   const works = [];
   for (const { slug, entry } of entries) {
     let hasBody = false;
     try {
       const bodyEntry = await entry.body();
-      hasBody = Boolean(bodyEntry?.node);
+      hasBody = markdocNodeHasContent(bodyEntry?.node);
     } catch {
       hasBody = false;
     }

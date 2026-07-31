@@ -528,11 +528,14 @@ export function resolveCanonicalUrl(input: {
 }
 
 /**
- * Normalise one collection entry.
- * Returns null when required fields are missing, or when a published work
- * fails content-mode validation (excluded safely rather than shown broken).
+ * Build a Work record from raw input, applying only the structural gates
+ * (title, summary, added date, enum fields). Unlike {@link normalizeWork},
+ * this does **not** apply the published-content-validity gate, so callers
+ * that need to explain *why* a published work is excluded (see
+ * {@link diagnoseWorkEligibility}) can inspect the fully-built record even
+ * when it would ultimately fail that gate.
  */
-export function normalizeWork(input: WorkEntryInput): Work | null {
+function buildWorkRecord(input: WorkEntryInput): Work | null {
   const title = input.title?.trim();
   const summary = input.summary?.trim();
   const type = input.type?.trim() ?? "";
@@ -627,11 +630,116 @@ export function normalizeWork(input: WorkEntryInput): Work | null {
 
   work.href = resolveWorkHref(work);
 
-  if (publicationState === "published" && !isPublishedContentValid(work)) {
+  return work;
+}
+
+/**
+ * Normalise one collection entry.
+ * Returns null when required fields are missing, or when a published work
+ * fails content-mode validation (excluded safely rather than shown broken).
+ */
+export function normalizeWork(input: WorkEntryInput): Work | null {
+  const work = buildWorkRecord(input);
+  if (!work) return null;
+  if (work.publicationState === "published" && !isPublishedContentValid(work)) {
     return null;
   }
-
   return work;
+}
+
+export type WorkEligibilityReport = {
+  slug: string;
+  title: string | null;
+  status: WorkStatus | null;
+  publicationState: PublicationState | null;
+  contentMode: ContentMode | null;
+  eligible: boolean;
+  /** Human-readable reasons the record is excluded from public surfaces. Empty when eligible. */
+  reasons: string[];
+};
+
+/**
+ * Explain, in plain language, why a Work record is or is not publicly
+ * eligible. Reuses {@link buildWorkRecord}, {@link isPublishedContentValid},
+ * and {@link isPubliclyEligible} rather than re-implementing the rules, so
+ * this can never disagree with the actual public pipeline.
+ *
+ * Intended for Keystatic authors and the `npm run diagnose:works` script —
+ * never rendered on a public route.
+ */
+export function diagnoseWorkEligibility(input: WorkEntryInput): WorkEligibilityReport {
+  const title = input.title?.trim() || null;
+  const rawDate = input.date?.trim() || "";
+  const rawStatus = input.status?.trim() ?? "";
+  const rawPublicationState = input.publicationState?.trim() ?? "";
+  const rawType = input.type?.trim() ?? "";
+
+  const preBuildReasons: string[] = [];
+  if (!title) preBuildReasons.push("Title is missing.");
+  if (!input.summary?.trim()) preBuildReasons.push("Summary is missing.");
+  if (!rawDate && !(rawStatus === "draft" && rawPublicationState === "developing")) {
+    preBuildReasons.push(
+      "Added date is missing — required unless Website visibility is Draft and Editorial state is Developing."
+    );
+  }
+  if (rawType && !isWorkType(rawType)) {
+    preBuildReasons.push(`Type "${rawType}" is not a recognised work type.`);
+  }
+  if (rawStatus && !isWorkStatus(rawStatus)) {
+    preBuildReasons.push(`Website visibility "${rawStatus}" is not a recognised value.`);
+  }
+  if (rawPublicationState && !isPublicationState(rawPublicationState)) {
+    preBuildReasons.push(`Editorial state "${rawPublicationState}" is not a recognised value.`);
+  }
+
+  const work = buildWorkRecord(input);
+  if (!work) {
+    return {
+      slug: input.slug,
+      title,
+      status: null,
+      publicationState: null,
+      contentMode: null,
+      eligible: false,
+      reasons:
+        preBuildReasons.length > 0
+          ? preBuildReasons
+          : ["Record failed to load — check required fields in Keystatic."],
+    };
+  }
+
+  const reasons: string[] = [];
+  if (work.status !== "listed") {
+    reasons.push(`Website visibility is "${work.status}", not Listed.`);
+  }
+  if (work.publicationState !== "published") {
+    reasons.push(`Editorial state is "${work.publicationState}", not Published.`);
+  } else if (!isPublishedContentValid(work)) {
+    if (work.contentMode === "hosted") {
+      reasons.push(
+        "Content mode is Hosted, which requires the full material in the document body — the body is currently empty. Write the full material in the body, or switch Content mode to Summary if the video/summary fields already carry the material."
+      );
+    } else if (work.contentMode === "summary") {
+      reasons.push(
+        "Content mode is Summary, but the Summary field is under 20 characters — write a fuller summary."
+      );
+    } else {
+      reasons.push(
+        "Content mode is Reference, but it is missing a usable external source URL or a meaningful annotation/summary."
+      );
+    }
+  }
+
+  const eligible = isPubliclyEligible(work);
+  return {
+    slug: work.slug,
+    title: work.title,
+    status: work.status,
+    publicationState: work.publicationState,
+    contentMode: work.contentMode,
+    eligible,
+    reasons: eligible ? [] : reasons,
+  };
 }
 
 /** Pure filter/sort: listed works, newest added-date first. */
@@ -935,6 +1043,29 @@ async function readAllWorks(): Promise<Work[]> {
   }
 
   return works;
+}
+
+/**
+ * Diagnostic report for every Work record, published or not, explaining
+ * why each one is or is not publicly eligible. Never used on a public route
+ * — see `npm run diagnose:works` and the Keystatic-facing tests.
+ */
+export async function getWorkEligibilityReports(): Promise<WorkEligibilityReport[]> {
+  const entries = (await reader.collections.works.all()) as RawWorksEntry[];
+  const reports: WorkEligibilityReport[] = [];
+
+  for (const { slug, entry } of entries) {
+    let hasBody = false;
+    try {
+      const bodyEntry = await entry.body();
+      hasBody = markdocNodeHasContent(bodyEntry?.node);
+    } catch {
+      hasBody = false;
+    }
+    reports.push(diagnoseWorkEligibility(entryToInput(slug, entry, hasBody)));
+  }
+
+  return reports;
 }
 
 /** Public library listing — published, listed, content-valid works only. */

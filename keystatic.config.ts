@@ -674,22 +674,54 @@ export default config({
       path: "content/works/*",
       slugField: "title",
       format: { contentField: "body" },
-      entryLayout: "form",
-      columns: ["type", "contentMode", "publicationState", "status", "featured"],
+      // "content" layout puts the (usually empty, often long) document body
+      // in its own focus pane and keeps every other field in a persistent
+      // sidebar — so publication-critical fields never require scrolling
+      // past the body to compare two records. See docs/CONTENT_GOVERNANCE.md.
+      entryLayout: "content",
+      columns: ["status", "publicationState", "contentMode", "type", "date", "featured"],
       schema: {
-        // — Identity —
+        // ============================================================
+        // A. IDENTITY + PUBLICATION ESSENTIALS
+        // Everything that decides whether a record can appear publicly.
+        // Keep this group first and short enough to compare two records
+        // without scrolling.
+        // ============================================================
         title: fields.slug({
           name: {
             label: "Title",
             validation: { isRequired: true, length: { min: 1, max: 160 } },
           },
         }),
-        summary: fields.text({
-          label: "Summary",
+        status: fields.select({
+          label: "Website visibility",
+          options: [
+            { label: "Draft — never shown publicly", value: "draft" },
+            { label: "Listed — publicly visible once every other requirement is met", value: "listed" },
+            { label: "Archived — kept for the record; not shown publicly", value: "archived" },
+          ],
+          defaultValue: "listed",
           description:
-            "One or two sentences for library cards. Do not paste the full article here.",
-          multiline: true,
-          validation: { isRequired: true, length: { min: 1, max: 400 } },
+            "CHECKLIST — a record only appears in the public Library, Start Here, and theme pages when ALL of these are true: Website visibility is Listed; Editorial state (below) is Published; Added date is set; and the content required by Content mode is present (Hosted needs the body written below; Summary needs a full sentence or two; Reference needs a working source URL). Missing any one hides it everywhere. — Draft: never shown publicly, regardless of other fields. Archived: kept in Git for the record; also never shown publicly.",
+        }),
+        publicationState: fields.select({
+          label: "Editorial state",
+          options: [
+            { label: "Published", value: "published" },
+            { label: "Developing", value: "developing" },
+          ],
+          defaultValue: "developing",
+          description:
+            "Published means the content is editorially ready — but that alone does not make it public; Website visibility must also be Listed. Developing: safe to edit here, but always hidden from every public surface no matter what else is set.",
+        }),
+        date: fields.date({
+          label: "Added date",
+          description:
+            "Required before a Listed + Published work can appear publicly. This is the date it joined GetToKnow.You, not necessarily when it was first published elsewhere (see Published date). Leave blank only while Website visibility is Draft and Editorial state is Developing — do not guess.",
+        }),
+        publishedDate: fields.date({
+          label: "Published date",
+          description: "Optional original publication date. Leave blank when unknown — do not guess.",
         }),
         type: fields.select({
           label: "Type",
@@ -706,99 +738,69 @@ export default config({
           ],
           defaultValue: "essay",
         }),
-        topics: fields.multiselect({
-          label: "Topics (collections)",
-          description:
-            "Which thematic collections should surface this item. An item may belong to several collections without being duplicated.",
-          options: COLLECTIONS.map((c) => ({ label: c.name, value: c.slug })),
-          defaultValue: [],
-        }),
-        themes: fields.multiselect({
-          label: "Themes (editorial rooms)",
-          description:
-            "Stable Theme identifiers. Display titles come from Theme records — renaming a theme does not require editing this work.",
-          options: [...THEME_OPTIONS],
-          defaultValue: [],
-        }),
-        series: fields.text({
-          label: "Series",
-          description:
-            'Optional. For example "Conversations I Wish I\u2019d Had". Leave blank if not part of a series.',
-          validation: { length: { max: 120 } },
-        }),
-
-        // — Publication —
-        status: fields.select({
-          label: "Website visibility (status)",
-          options: [
-            { label: "Draft — not publicly visible", value: "draft" },
-            { label: "Listed — publicly visible", value: "listed" },
-            { label: "Archived — kept in the archive only", value: "archived" },
-          ],
-          defaultValue: "listed",
-          description:
-            "Draft: never shown publicly. Listed: eligible for Explore, Start Here, collections, and archive. Archived: archive only.",
-        }),
-        publicationState: fields.select({
-          label: "Editorial maturity (publication state)",
-          options: [
-            { label: "Published", value: "published" },
-            { label: "Developing", value: "developing" },
-          ],
-          defaultValue: "developing",
-          description:
-            "Published: finished and safe for visitors. Developing: editable in Keystatic but hidden from every public surface until published.",
-        }),
         contentMode: fields.select({
           label: "Content mode",
           options: [
-            {
-              label: "Hosted — full material on GetToKnow.You",
-              value: "hosted",
-            },
-            {
-              label: "Summary — standalone summary or adaptation",
-              value: "summary",
-            },
-            {
-              label: "Reference — external source with annotation",
-              value: "reference",
-            },
+            { label: "Hosted — full material in the body below", value: "hosted" },
+            { label: "Summary — a short summary is enough", value: "summary" },
+            { label: "Reference — annotated external source", value: "reference" },
           ],
           defaultValue: "summary",
           description:
-            "Hosted: fill the document body (required for public hosted works). Summary: visitors understand the idea on the work page; external links optional. Reference: catalogue an external source; do not reproduce copyrighted material.",
+            "Decides what must be filled in for this record to count as publicly complete. Hosted: the full write-up must be in the document body — a Native video alone does NOT satisfy Hosted, even though the video still plays on the page; if the material is only a video, use Summary instead. Summary: the Summary field alone (20+ characters) is enough; attach a Native video below if there is one. Reference: needs a usable external source URL plus a short annotation or summary.",
         }),
-        date: fields.date({
-          label: "Added date",
+        summary: fields.text({
+          label: "Summary",
           description:
-            "Date this record was added to the commons (not necessarily a publication date). Leave blank for new drafts until the added date is known — do not guess.",
+            "One or two sentences for library cards. Required for every record, and is itself the public content when Content mode is Summary. Do not paste the full article here.",
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 400 } },
         }),
-        publishedDate: fields.date({
-          label: "Published date",
+        featured: fields.checkbox({
+          label: "Featured",
           description:
-            "The actual publication date, if known. Leave blank if unknown — do not guess.",
+            "Eligible for prominent placement (for example the homepage) once already publicly eligible. Does not place it in Start Here on its own — edit the Start Here singleton sequence for that.",
+          defaultValue: false,
         }),
 
-        // — Hosted / summary material —
+        // ============================================================
+        // B. MAIN CONTENT
+        // What visitors actually see on the work page.
+        // ============================================================
         keyTakeaway: fields.text({
           label: "Key takeaway",
-          description:
-            "Optional short insight for summary and hosted pages. One sentence. Do not repeat the summary verbatim.",
+          description: "Optional one-sentence insight, shown on the page. Do not repeat the summary verbatim.",
           multiline: true,
           validation: { length: { max: 280 } },
         }),
         annotation: fields.text({
           label: "Annotation",
           description:
-            "Why this work matters or why it was included. Especially useful for references and summaries. Do not paste the full body here.",
+            "Why this work matters or was included — shown on the page. Especially useful for Reference and Summary records. Do not paste the full body here.",
           multiline: true,
           validation: { length: { max: 800 } },
+        }),
+        video: fields.text({
+          label: "Native video",
+          description:
+            'Site path to an MP4 served from this site, for example "/media/posts/teenager.mp4". Plays on the work page whenever set, regardless of Content mode. Do not paste Xiaohongshu or Instagram embed codes; use exact filename casing.',
+          validation: { length: { max: 500 } },
+        }),
+        coverImage: fields.text({
+          label: "Cover image",
+          description:
+            'Site path for the library card and hero, for example "/media/posts/teenager.jpg". Prefer this over Thumbnail for new work.',
+          validation: { length: { max: 500 } },
+        }),
+        thumbnail: fields.text({
+          label: "Thumbnail (legacy)",
+          description: "Optional fallback image path or URL, only used when Cover image is empty.",
+          validation: { length: { max: 500 } },
         }),
         body: fields.markdoc({
           label: "Full document body",
           description:
-            "Use when Content mode is Hosted (required for public hosted works). Leave empty for an external reference. Optional short adaptation for summaries. Supports paragraphs, headings, emphasis, links, quotations, lists, dividers, and images.",
+            "Required when Content mode is Hosted — that is the only way a Hosted record becomes publicly complete. Leave empty for Summary or Reference records. Supports paragraphs, headings, emphasis, links, quotations, lists, dividers, and images.",
           extension: "mdoc",
           options: {
             bold: true,
@@ -817,28 +819,63 @@ export default config({
           },
         }),
 
-        // — Source and provenance —
+        // ============================================================
+        // C. ORGANISATION AND DISCOVERY
+        // ============================================================
+        themes: fields.multiselect({
+          label: "Themes (editorial rooms)",
+          description:
+            "Stable Theme identifiers. Display titles come from Theme records — renaming a theme does not require editing this work.",
+          options: [...THEME_OPTIONS],
+          defaultValue: [],
+        }),
+        topics: fields.multiselect({
+          label: "Topics (collections)",
+          description:
+            "Which thematic collections should surface this item. A work may belong to several collections without being duplicated.",
+          options: COLLECTIONS.map((c) => ({ label: c.name, value: c.slug })),
+          defaultValue: [],
+        }),
+        series: fields.text({
+          label: "Series",
+          description:
+            'Optional. For example "Conversations I Wish I\u2019d Had". Leave blank if not part of a series.',
+          validation: { length: { max: 120 } },
+        }),
+        languages: fields.multiselect({
+          label: "Languages",
+          description: "Languages present in the body, transcript, or translation.",
+          options: [
+            { label: "English", value: "English" },
+            { label: "Chinese", value: "Chinese" },
+          ],
+          defaultValue: [],
+        }),
+        project: fields.select({
+          label: "Project",
+          options: [
+            { label: "GetToKnow.You", value: "gettoknow" },
+            { label: "ConversationOS", value: "conversationos" },
+            { label: "MandarinOS", value: "mandarinos" },
+          ],
+          defaultValue: "gettoknow",
+          description: "Which project this library item primarily belongs to.",
+        }),
+        related: fields.array(fields.text({ label: "Related work slug" }), {
+          label: "Related works",
+          description:
+            "Optional ordered slugs of other works to show under Related content. Leave empty to use series/topic matching instead.",
+          itemLabel: (props) => props.value || "Related slug",
+        }),
+
+        // ============================================================
+        // D. ORIGIN AND DISTRIBUTION
+        // ============================================================
         origin: fields.select({
           label: "Origin (first published)",
           options: [{ label: "Not specified", value: "" }, ...ORIGIN_OPTIONS],
           defaultValue: "",
-          description:
-            "Where this item first appeared. Separate from the canonical source below.",
-        }),
-        sourceTitle: fields.text({
-          label: "Source title",
-          description: "For references: the original work title, if different from this record.",
-          validation: { length: { max: 200 } },
-        }),
-        sourceAuthor: fields.text({
-          label: "Source author",
-          description: "For references: author or creator of the original work.",
-          validation: { length: { max: 120 } },
-        }),
-        sourcePublication: fields.text({
-          label: "Source publication",
-          description: 'For references: for example "Harvard Business Review" or "Substack".',
-          validation: { length: { max: 120 } },
+          description: "Where this item first appeared. Separate from the canonical source below.",
         }),
         canonicalPlatform: fields.select({
           label: "Canonical platform",
@@ -850,16 +887,9 @@ export default config({
         canonicalUrl: fields.text({
           label: "Canonical URL (external or first-party path)",
           description:
-            "For an external canonical source, use an absolute https URL. For a first-party page such as /charter, use the site path. Leave blank when Canonical platform is GetToKnow.You (the library URL is derived automatically). Leave blank for developing works.",
+            "For an external canonical source, use an absolute https URL. For a first-party page such as /charter, use the site path. Leave blank when Canonical platform is GetToKnow.You (the library URL is derived automatically), and leave blank for Developing works.",
           validation: { length: { max: 500 } },
         }),
-        seoCanonicalUrl: fields.url({
-          label: "SEO canonical URL (advanced)",
-          description:
-            "Optional. Emit an external HTML rel=canonical only when this page substantially duplicates an external canonical work and that external publication remains canonical. Leave blank in almost all cases — summary and reference pages keep their own internal canonical URL.",
-        }),
-
-        // — Distribution —
         distributionLinks: fields.array(
           fields.object({
             platform: fields.select({
@@ -889,57 +919,6 @@ export default config({
               "Distribution link",
           }
         ),
-
-        // — Media (native library) —
-        coverImage: fields.text({
-          label: "Cover image",
-          description:
-            'Site path for the library card and hero, for example "/media/posts/teenager.jpg". Prefer this over Thumbnail for new work.',
-          validation: { length: { max: 500 } },
-        }),
-        video: fields.text({
-          label: "Native video",
-          description:
-            'Optional site path to an MP4 served from this site, for example "/media/posts/teenager.mp4". Do not paste Xiaohongshu or Instagram embed codes.',
-          validation: { length: { max: 500 } },
-        }),
-        thumbnail: fields.text({
-          label: "Thumbnail (legacy)",
-          description:
-            "Optional fallback image path or URL when Cover image is empty.",
-          validation: { length: { max: 500 } },
-        }),
-        watchTime: fields.text({
-          label: "Watch time",
-          description: 'Optional, human-readable. For example "4 min" or "90 sec".',
-          validation: { length: { max: 20 } },
-        }),
-        readTime: fields.text({
-          label: "Read time",
-          description: 'Optional, human-readable. For example "6 min read".',
-          validation: { length: { max: 20 } },
-        }),
-        languages: fields.multiselect({
-          label: "Languages",
-          description: "Languages present in the body, transcript, or translation.",
-          options: [
-            { label: "English", value: "English" },
-            { label: "Chinese", value: "Chinese" },
-          ],
-          defaultValue: [],
-        }),
-        project: fields.select({
-          label: "Project",
-          options: [
-            { label: "GetToKnow.You", value: "gettoknow" },
-            { label: "ConversationOS", value: "conversationos" },
-            { label: "MandarinOS", value: "mandarinos" },
-          ],
-          defaultValue: "gettoknow",
-          description: "Which project this library item primarily belongs to.",
-        }),
-
-        // — Original social discovery (optional) —
         originalXiaohongshu: fields.url({
           label: "Originally on Xiaohongshu",
           description: "Optional discovery link. Never the only public destination.",
@@ -952,21 +931,39 @@ export default config({
           label: "Originally on Substack",
           description: "Optional discovery link. Never the only public destination.",
         }),
-
-        // — Related (explicit) —
-        related: fields.array(fields.text({ label: "Related work slug" }), {
-          label: "Related works",
-          description:
-            "Optional ordered slugs of other works to show under Related content. Leave empty to use series/topic matching.",
-          itemLabel: (props) => props.value || "Related slug",
+        watchTime: fields.text({
+          label: "Watch time",
+          description: 'Optional, human-readable. For example "4 min" or "90 sec".',
+          validation: { length: { max: 20 } },
+        }),
+        readTime: fields.text({
+          label: "Read time",
+          description: 'Optional, human-readable. For example "6 min read".',
+          validation: { length: { max: 20 } },
+        }),
+        sourceTitle: fields.text({
+          label: "Source title",
+          description: "For references: the original work title, if different from this record.",
+          validation: { length: { max: 200 } },
+        }),
+        sourceAuthor: fields.text({
+          label: "Source author",
+          description: "For references: author or creator of the original work.",
+          validation: { length: { max: 120 } },
+        }),
+        sourcePublication: fields.text({
+          label: "Source publication",
+          description: 'For references: for example "Harvard Business Review" or "Substack".',
+          validation: { length: { max: 120 } },
         }),
 
-        // — Curation —
-        featured: fields.checkbox({
-          label: "Featured",
+        // ============================================================
+        // E. ADVANCED / RARELY USED
+        // ============================================================
+        seoCanonicalUrl: fields.url({
+          label: "SEO canonical URL (advanced)",
           description:
-            "Eligible for prominent placement (for example the homepage). Featured alone does not place it in Start Here — edit the Start Here singleton sequence.",
-          defaultValue: false,
+            "Leave blank in almost all cases. Only set when this page substantially duplicates an external canonical work that must remain the SEO-canonical version.",
         }),
       },
     }),
