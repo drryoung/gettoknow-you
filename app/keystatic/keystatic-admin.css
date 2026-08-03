@@ -1,0 +1,86 @@
+/**
+ * Keystatic admin layout overrides — development only.
+ *
+ * This stylesheet is only imported by `keystatic.ts`, which the production
+ * `KeystaticLayout` never renders (see `app/keystatic/layout.tsx`), so it
+ * never reaches the public site.
+ *
+ * WHY THIS EXISTS
+ * Keystatic 0.6.x renders every collection/singleton entry form as a 12
+ * column CSS grid (`@keystatic/core`'s internal `ObjectFieldInput`), but the
+ * public `collection()`/`singleton()` config has no `layout` option to
+ * choose column spans per field — that option only exists on the nested
+ * `fields.object()` schema type, which would change how Works are stored in
+ * frontmatter. Left at its default, every field spans all 12 columns, so
+ * short fields (selects, dates, a single checkbox) each take a full row and
+ * a 1500px-wide screen is mostly wasted whitespace.
+ *
+ * This file narrows the grid-column span of naturally-short fields so
+ * several sit side by side, without touching Keystatic's config, schema, or
+ * storage. It changes layout only — data shape and content are untouched.
+ *
+ * STABILITY OF THE SELECTORS BELOW
+ * There is no supported Keystatic/@keystar-ui API for this, so every
+ * selector is anchored to attributes Keystatic renders deliberately for its
+ * own purposes (and is therefore reasonably stable for the pinned
+ * `@keystatic/core` version), never to Emotion's auto-generated,
+ * content-hashed class names (e.g. `css-1kq27bo`), which are not part of
+ * any public contract and are expected to change across upgrades:
+ *   - `#item-edit-form` / `#item-create-form` — literal ids Keystatic
+ *     uses to associate its own Save button via the `form` attribute.
+ *   - `[data-scrollable="true"]` — Keystatic's own scroll-region marker.
+ *   - `select`, `input[type="date"]`, `textarea` — semantic HTML the
+ *     underlying input renders, regardless of styling.
+ *   - `role="group"` (multiselect checkbox groups), `role="grid"` (array /
+ *     list-view fields), `data-keystatic-editor` (the Markdoc body editor)
+ *     — Keystatic's own accessibility/editor markers, used here only to
+ *     exclude fields that must stay full width.
+ * If a future `@keystatic/core` upgrade changes this internal structure,
+ * these rules simply stop matching and the form falls back to Keystatic's
+ * normal full-width stacked layout — it cannot break the editor.
+ */
+
+/* Keystatic caps the "form" entry-layout page at a fixed reading-width
+   container (`PageContainer`'s `maxWidth: container.medium`), which is why
+   a 1500px-wide window still shows a narrow column with wide blank
+   margins. Relax that cap on wider screens so the multi-column grid below
+   actually has room to lay fields out side by side. */
+@media (min-width: 860px) {
+  #item-edit-form [data-scrollable="true"] > div,
+  #item-create-form [data-scrollable="true"] > div {
+    max-width: 1800px !important;
+  }
+}
+
+/* The entry form's field grid: Keystatic's own 12-column CSS grid.
+   Tightening the gaps slightly leaves more room for columns. */
+#item-edit-form [data-scrollable="true"] > div > div,
+#item-create-form [data-scrollable="true"] > div > div {
+  column-gap: var(--kui-size-space-large, 20px);
+}
+
+/* Each field's grid item. Narrow the fields that are naturally short:
+   selects, dates, the lone "Featured" checkbox, and single-line text/URL
+   fields. Fields that need the full row keep Keystatic's default span
+   (first field / title+slug, multiline text, multiselect groups, array
+   list fields, and the Markdoc body editor) via the :not() exclusions. */
+@media (min-width: 860px) {
+  #item-edit-form [data-scrollable="true"] > div > div > div:not(:first-child):not(:has(textarea)):not(:has([role="group"])):not(:has([role="grid"])):not(:has([data-keystatic-editor])),
+  #item-create-form [data-scrollable="true"] > div > div > div:not(:first-child):not(:has(textarea)):not(:has([role="group"])):not(:has([role="grid"])):not(:has([data-keystatic-editor])) {
+    grid-column: span 6 !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  #item-edit-form [data-scrollable="true"] > div > div > div:not(:first-child):not(:has(textarea)):not(:has([role="group"])):not(:has([role="grid"])):not(:has([data-keystatic-editor])),
+  #item-create-form [data-scrollable="true"] > div > div > div:not(:first-child):not(:has(textarea)):not(:has([role="group"])):not(:has([role="grid"])):not(:has([data-keystatic-editor])) {
+    grid-column: span 4 !important;
+  }
+}
+
+@media (min-width: 1600px) {
+  #item-edit-form [data-scrollable="true"] > div > div > div:not(:first-child):not(:has(textarea)):not(:has([role="group"])):not(:has([role="grid"])):not(:has([data-keystatic-editor])),
+  #item-create-form [data-scrollable="true"] > div > div > div:not(:first-child):not(:has(textarea)):not(:has([role="group"])):not(:has([role="grid"])):not(:has([data-keystatic-editor])) {
+    grid-column: span 3 !important;
+  }
+}
