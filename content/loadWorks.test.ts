@@ -1846,13 +1846,23 @@ describe("Keystatic Works editor structure", () => {
     config.indexOf("themes: collection(")
   );
 
-  it("uses the content entry layout so the body does not push metadata down", () => {
-    expect(worksSection).toContain('entryLayout: "content"');
+  it("uses the form entry layout so publication fields use the full width", () => {
+    expect(worksSection).toContain('entryLayout: "form"');
     expect(worksSection).toContain('format: { contentField: "body" }');
   });
 
   it("places publication-critical fields before secondary metadata", () => {
-    const criticalFields = ["status:", "publicationState:", "date:", "publishedDate:", "type:", "contentMode:", "summary:", "featured:"];
+    const criticalFields = [
+      "status:",
+      "publicationState:",
+      "date:",
+      "publishedDate:",
+      "contentMode:",
+      "type:",
+      "featured:",
+      "summary:",
+      "video:",
+    ];
     const secondaryFields = ["themes:", "topics:", "series:", "distributionLinks:", "seoCanonicalUrl:"];
     const criticalIndexes = criticalFields.map((f) => worksSection.indexOf(f));
     const secondaryIndexes = secondaryFields.map((f) => worksSection.indexOf(f));
@@ -1863,32 +1873,45 @@ describe("Keystatic Works editor structure", () => {
     expect(lastCritical).toBeLessThan(firstSecondary);
   });
 
-  it("documents the publication checklist and Hosted-vs-Summary distinction in field descriptions", () => {
-    expect(worksSection).toContain("CHECKLIST");
-    expect(worksSection).toContain("Website visibility is Listed");
-    expect(worksSection).toContain("Editorial state (below) is Published");
-    expect(worksSection).toContain("Added date is set");
-    const contentModeSection = worksSection.slice(worksSection.indexOf('contentMode: fields.select('));
-    const contentModeDescription = contentModeSection.slice(0, contentModeSection.indexOf("}),"));
-    expect(contentModeDescription).toContain("Native video alone does NOT satisfy Hosted");
+  it("places the Markdoc body after publication and video fields", () => {
+    expect(worksSection.indexOf("video:")).toBeLessThan(worksSection.indexOf("body: fields.markdoc("));
+    expect(worksSection.indexOf("summary:")).toBeLessThan(worksSection.indexOf("body: fields.markdoc("));
   });
 
-  it("clarifies that Added date and Published date are distinct", () => {
+  it("uses concise, accurate field descriptions without the long checklist", () => {
+    expect(worksSection).not.toContain("CHECKLIST");
+    expect(worksSection).toContain(
+      "Listed allows this Work to appear publicly. Draft and Archived never appear."
+    );
+    expect(worksSection).toContain(
+      "Published means editorially ready. Developing remains hidden even when Website visibility is Listed."
+    );
+    const contentModeSection = worksSection.slice(worksSection.indexOf('contentMode: fields.select('));
+    const contentModeDescription = contentModeSection.slice(0, contentModeSection.indexOf("}),"));
+    expect(contentModeDescription).toContain(
+      "Summary: video or short Work with a complete summary."
+    );
+    expect(contentModeDescription).toContain(
+      "Hosted: a substantial article in the body below."
+    );
+  });
+
+  it("clarifies that Added date and Original published date are distinct", () => {
     const dateSection = worksSection.slice(
       worksSection.indexOf("date: fields.date("),
       worksSection.indexOf("publishedDate: fields.date(")
     );
-    expect(dateSection).toContain("Required before a Listed + Published work can appear publicly");
+    expect(dateSection).toContain("Required for a public Work.");
     const publishedDateSection = worksSection.slice(
       worksSection.indexOf("publishedDate: fields.date("),
-      worksSection.indexOf("type: fields.select(")
+      worksSection.indexOf("contentMode: fields.select(")
     );
-    expect(publishedDateSection).toContain("Optional original publication date");
+    expect(publishedDateSection).toContain("Optional date first published elsewhere.");
   });
 
   it("keeps the collection list columns focused on publication comparison", () => {
     expect(worksSection).toContain(
-      'columns: ["status", "publicationState", "contentMode", "type", "date", "featured"]'
+      'columns: ["status", "publicationState", "contentMode", "date", "type", "featured"]'
     );
   });
 
