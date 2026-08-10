@@ -1142,6 +1142,7 @@ describe("getListedWorks", () => {
     const slugs = works.map((w) => w.slug).sort();
     expect(slugs).toEqual(
       [
+        "before-you-build",
         "conversation-missed-opportunity",
         "gettoknowyou-community-charter",
         "mandarinos",
