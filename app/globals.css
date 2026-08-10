@@ -525,7 +525,7 @@ h3 {
 
 .work-body {
   margin: 1.75rem 0 0;
-  max-width: var(--measure-editorial, 46ch);
+  max-width: var(--measure-reading);
 }
 
 .work-body > h2 {
@@ -538,12 +538,14 @@ h3 {
 .work-body > h3 {
   margin: 1.35rem 0 0.5rem;
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 600;
 }
 
-.work-body > p,
+/* Match Library summary/deck size so Hosted body isn't a smaller second style. */
+.work-body p,
 .work-body li {
+  font-size: 1.12rem;
   line-height: 1.65;
 }
 
