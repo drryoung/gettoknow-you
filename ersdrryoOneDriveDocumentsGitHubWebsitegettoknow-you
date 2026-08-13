@@ -1,0 +1,69 @@
+warning: in the working copy of 'content/works/conversation-missed-opportunity.mdoc', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/content/works/conversation-missed-opportunity.mdoc b/content/works/conversation-missed-opportunity.mdoc[m
+[1mindex acb33fa..49dc9aa 100644[m
+[1m--- a/content/works/conversation-missed-opportunity.mdoc[m
+[1m+++ b/content/works/conversation-missed-opportunity.mdoc[m
+[36m@@ -1,22 +1,16 @@[m
+ ---[m
+ title: Conversation — Missed Teenage Opportunity[m
+[31m-summary: >-[m
+[31m-  As a teenager, I met someone I wanted to know better—but I did not know how to[m
+[31m-  move the conversation beyond hello. Looking back, it was not only a lack of[m
+[31m-  confidence. Nobody had taught me how to keep a conversation going.[m
+[31m-type: story[m
+[31m-topics:[m
+[31m-  - stories[m
+[31m-  - conversation[m
+[31m-  - relationships[m
+[31m-themes:[m
+[31m-  - better-conversations[m
+[31m-series: Conversations - successes and failures[m
+ status: listed[m
+ publicationState: published[m
+[31m-contentMode: summary[m
+ date: 2026-07-27[m
+ publishedDate: 2026-07-27[m
+[32m+[m[32mcontentMode: summary[m
+[32m+[m[32mtype: story[m
+[32m+[m[32mfeatured: true[m
+[32m+[m[32msummary: >-[m
+[32m+[m[32m  As a teenager, I met someone I wanted to know better—but I did not know how to[m
+[32m+[m[32m  move the conversation beyond hello. Looking back, it was not only a lack of[m
+[32m+[m[32m  confidence. Nobody had taught me how to keep a conversation going.[m
+ keyTakeaway: >-[m
+   Wanting to know someone is not enough if nobody has taught you how to keep a[m
+   conversation going.[m
+[36m@@ -24,20 +18,27 @@[m [mannotation: >-[m
+   A short founder story about a missed teenage conversation—and why learning to[m
+   talk with people matters. The video lives on Instagram; this page carries the[m
+   idea so visitors are not sent into a social-platform login wall.[m
+[32m+[m[32mcoverImage: /media/posts/missed_opportunity.png[m
+[32m+[m[32mthemes:[m
+[32m+[m[32m  - better-conversations[m
+[32m+[m[32mtopics:[m
+[32m+[m[32m  - stories[m
+[32m+[m[32m  - conversation[m
+[32m+[m[32m  - relationships[m
+[32m+[m[32mseries: Conversations - successes and failures[m
+[32m+[m[32mlanguages:[m
+[32m+[m[32m  - English[m
+[32m+[m[32mproject: gettoknow[m
+[32m+[m[32mrelated: [][m
+ origin: xiaohongshu[m
+ canonicalPlatform: instagram[m
+ distributionLinks:[m
+   - platform: instagram[m
+     label: Watch the video[m
+     url: https://www.instagram.com/p/DbSFk2rx5Ca/[m
+[32m+[m[32moriginalInstagram: https://www.instagram.com/p/DbSFk2rx5Ca/[m
+ watchTime: 90s[m
+ readTime: 20s[m
+[31m-languages:[m
+[31m-  - English[m
+[31m-project: gettoknow[m
+[31m-originalInstagram: https://www.instagram.com/p/DbSFk2rx5Ca/[m
+[31m-related: [][m
+[31m-featured: true[m
+ ---[m
+ As a teenager, I invited someone to a party that I wanted to know better—but I did not know how to move the conversation beyond hello.[m
+ [m

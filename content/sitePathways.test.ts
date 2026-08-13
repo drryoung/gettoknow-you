@@ -52,7 +52,7 @@ function stubWork(slug: string): Work {
 
 describe("sitePathways", () => {
   it("maps approved slugs into Try and Meet without inventing titles", () => {
-    expect(PATHWAY_SLUGS.try).toEqual(["mandarinos"]);
+    expect(PATHWAY_SLUGS.try).toEqual(["mandarinos", "englishos"]);
     expect(PATHWAY_SLUGS.meet).toEqual(["gettoknowyou-community-charter"]);
   });
 
@@ -66,7 +66,7 @@ describe("sitePathways", () => {
     const listed = await getListedWorks();
     const listedSlugs = new Set(listed.map((w) => w.slug));
 
-    expect(tryWorks.map((w) => w.slug)).toEqual(["mandarinos"]);
+    expect(tryWorks.map((w) => w.slug)).toEqual(["mandarinos", "englishos"]);
     for (const work of tryWorks) {
       expect(listedSlugs.has(work.slug)).toBe(true);
       expect(work.title.length).toBeGreaterThan(0);

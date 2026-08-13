@@ -62,7 +62,8 @@ describe("page copy loaders", () => {
     expect(library.originalNote).toContain("optional discovery references");
     expect(tryPage.externalCtaLabel).toBe("Open MandarinOS.app");
     expect(meet.intentHeading).toBe("What this may become");
-    expect(about.ecosystem).toHaveLength(4);
+    expect(about.ecosystem).toHaveLength(5);
+    expect(about.ecosystem.map((item) => item.label)).toContain("EnglishOS");
     expect(about.bioParagraphs).toHaveLength(2);
     expect(themes.inDevelopmentLabel).toBe("A room in development");
     expect(themes.featuredHeading).toBe("Featured");

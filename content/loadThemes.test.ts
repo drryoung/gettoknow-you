@@ -280,10 +280,10 @@ describe("filesystem theme records", () => {
     expect(existsSync(dir)).toBe(true);
     const files = readdirSync(dir).filter((f) => f.endsWith(".mdoc")).sort();
     expect(files).toEqual([
+      "EnglishOS.mdoc",
       "better-conversations.mdoc",
       "building-gettoknow-you.mdoc",
       "cross-cultural-understanding.mdoc",
-      "language-and-relationships.mdoc",
       "trust-and-human-connection.mdoc",
     ]);
 

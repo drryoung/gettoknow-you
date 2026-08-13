@@ -20,6 +20,10 @@ ecosystem:
     text: >-
       The first practical application—a conversation simulator for Mandarin
       learners.
+  - label: EnglishOS
+    text: >-
+      An emerging second implementation, being developed now, for people who
+      know English but struggle to sustain and deepen real conversations.
   - label: Raymond Young
     text: The founder and personal voice behind the work.
 bioHeading: Raymond Young

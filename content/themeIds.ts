@@ -13,6 +13,7 @@ export const THEME_IDS = [
   "language-and-relationships",
   "trust-and-human-connection",
   "building-gettoknow-you",
+  "EnglishOS",
 ] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];
@@ -24,6 +25,7 @@ export const THEME_OPTIONS = [
   { label: "Language and Relationships", value: "language-and-relationships" },
   { label: "Trust and Human Connection", value: "trust-and-human-connection" },
   { label: "Building GetToKnow.You", value: "building-gettoknow-you" },
+  { label: "EnglishOS", value: "EnglishOS" },
 ] as const;
 
 export function isThemeId(value: string): value is ThemeId {

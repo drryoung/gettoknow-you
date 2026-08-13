@@ -1144,6 +1144,8 @@ describe("getListedWorks", () => {
       [
         "before-you-build",
         "conversation-missed-opportunity",
+        "englishos",
+        "englishos-you-can-answer-but-can-you-continue",
         "gettoknowyou-community-charter",
         "mandarinos",
         "outsider",
@@ -1329,6 +1331,7 @@ describe("getStartHereWorks", () => {
       "conversation-missed-opportunity",
       "the-dunedin-checkout-success-story",
       "mandarinos",
+      "englishos",
       "gettoknowyou-community-charter",
     ]);
     expect(works[0]?.title).toBe("Conversation — Missed Teenage Opportunity");
@@ -1338,6 +1341,7 @@ describe("getStartHereWorks", () => {
       "/library/conversation-missed-opportunity",
       "/library/the-dunedin-checkout-success-story",
       "/library/mandarinos",
+      "/library/englishos",
       "/charter",
     ]);
   });

@@ -12,7 +12,7 @@ secondaryCtaLabel: Explore GetToKnow.You
 pathwaysEyebrow: Where to begin
 pathwaysHeading: Five ways in
 pathwaysLede: >-
-  Whether you arrived from social media, MandarinOS, or a personal
+  Whether you arrived from social media, MandarinOS, EnglishOS, or a personal
   recommendation, start wherever feels natural.
 pathways:
   - key: start-here
@@ -28,12 +28,14 @@ pathways:
       hosted here.
   - key: try
     label: Try
-    text: MandarinOS and other practical conversation projects you can put into use.
+    text: >-
+      MandarinOS, available to use now, and EnglishOS, being developed
+      now—practical conversation projects built on ConversationOS.
   - key: about
     label: About
     text: >-
-      Raymond Young, why he is building GetToKnow.You, and how ConversationOS
-      and MandarinOS fit together.
+      Raymond Young, why he is building GetToKnow.You, and how ConversationOS,
+      MandarinOS, and EnglishOS fit together.
 featuredEyebrow: From the commons
 featuredHeading: Featured
 featuredLede: >-
