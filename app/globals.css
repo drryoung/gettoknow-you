@@ -1095,6 +1095,19 @@ h3 {
   background: #101614;
 }
 
+.library-video__embed {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
+
+.library-video__external {
+  margin: 0;
+  padding: 1.5rem;
+  text-align: center;
+}
+
 .library-original {
   margin-top: 2rem;
   padding-top: 1.25rem;

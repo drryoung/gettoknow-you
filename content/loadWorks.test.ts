@@ -69,6 +69,7 @@ function work(
     project: "gettoknow",
     coverImage: null,
     video: null,
+    externalVideoUrl: null,
     languages: [],
     original: { xiaohongshu: null, instagram: null, substack: null },
     related: [],
@@ -386,6 +387,125 @@ describe("normalizeWork", () => {
       featured: true,
     });
     expect(result?.featured).toBe(true);
+  });
+});
+
+describe("Video content type", () => {
+  const baseVideoInput = {
+    slug: "family-check-in",
+    title: "Family Check-In",
+    summary: LONG_SUMMARY,
+    type: "video" as const,
+    contentMode: "summary" as const,
+    date: "2026-08-20",
+    status: "listed" as const,
+    keyTakeaway: "A short conversation update, in video form.",
+  };
+
+  it("normalizes a representative Video work with all fields", () => {
+    const result = normalizeWork({
+      ...baseVideoInput,
+      publicationState: "published",
+      themes: ["better-conversations"],
+      coverImage: "/media/posts/family-check-in.jpg",
+      externalVideoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    });
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe("video");
+    expect(result?.contentMode).toBe("summary");
+    expect(result?.externalVideoUrl).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    expect(result?.coverImage).toBe("/media/posts/family-check-in.jpg");
+    expect(result?.themes).toEqual(["better-conversations"]);
+  });
+
+  it("accepts an ordinary external video URL from a non-YouTube host", () => {
+    const result = normalizeWork({
+      ...baseVideoInput,
+      publicationState: "published",
+      externalVideoUrl: "https://www.xiaohongshu.com/explore/abc123",
+    });
+    expect(result?.externalVideoUrl).toBe("https://www.xiaohongshu.com/explore/abc123");
+  });
+
+  it("accepts any usable https video/player URL, not just known hosts", () => {
+    const result = normalizeWork({
+      ...baseVideoInput,
+      publicationState: "published",
+      externalVideoUrl: "https://future-video-host.example/watch/xyz",
+    });
+    expect(result?.externalVideoUrl).toBe("https://future-video-host.example/watch/xyz");
+  });
+
+  it("drops an unusable (localhost / non-http) video URL rather than exposing it", () => {
+    const result = normalizeWork({
+      ...baseVideoInput,
+      publicationState: "published",
+      externalVideoUrl: "http://localhost:3000/video",
+    });
+    expect(result?.externalVideoUrl).toBeNull();
+  });
+
+  it("excludes a Draft video from public eligibility even when Published", () => {
+    const result = normalizeWork({
+      ...baseVideoInput,
+      status: "draft",
+      publicationState: "published",
+      externalVideoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    });
+    // Draft never appears publicly, but the record itself still normalizes —
+    // isPubliclyEligible is the authoritative public gate.
+    expect(result).not.toBeNull();
+    expect(isPubliclyEligible(result!)).toBe(false);
+  });
+
+  it("excludes a Developing video from public eligibility", () => {
+    const result = normalizeWork({
+      ...baseVideoInput,
+      publicationState: "developing",
+      externalVideoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    });
+    expect(result).not.toBeNull();
+    expect(isPubliclyEligible(result!)).toBe(false);
+  });
+
+  it("makes a Published, Listed video publicly eligible", () => {
+    const result = normalizeWork({
+      ...baseVideoInput,
+      publicationState: "published",
+      externalVideoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    });
+    expect(result).not.toBeNull();
+    expect(isPubliclyEligible(result!)).toBe(true);
+  });
+
+  it("renders without a video URL when the field is left blank", () => {
+    const result = normalizeWork({
+      ...baseVideoInput,
+      publicationState: "published",
+    });
+    expect(result).not.toBeNull();
+    expect(result?.externalVideoUrl).toBeNull();
+    expect(result?.video).toBeNull();
+    expect(isPubliclyEligible(result!)).toBe(true);
+  });
+
+  it("recognizes the Image / Carousel and Project update content types", () => {
+    const image = normalizeWork({
+      ...baseVideoInput,
+      slug: "carousel-example",
+      type: "image",
+      publicationState: "published",
+    });
+    const update = normalizeWork({
+      ...baseVideoInput,
+      slug: "update-example",
+      type: "update",
+      publicationState: "published",
+    });
+    expect(image?.type).toBe("image");
+    expect(update?.type).toBe("update");
+    expect(isPubliclyEligible(image!)).toBe(true);
+    expect(isPubliclyEligible(update!)).toBe(true);
   });
 });
 
@@ -1395,6 +1515,36 @@ describe("getStartHereWorks", () => {
     const detail = readFileSync(path.join(root, "app/components/LibraryDetail.tsx"), "utf8");
     expect(detail).toContain('id="video"');
   });
+
+  it("gives an external-video Work the same Watch CTA as a local-video Work, without affecting Article works", async () => {
+    const { workPrimaryAction, workTitleHref } = await import("../app/components/WorkList");
+
+    const externalVideoWork = work({
+      slug: "family-check-in",
+      title: "Family Check-In",
+      date: "2026-08-20",
+      status: "listed",
+      publicationState: "published",
+      type: "video",
+      externalVideoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    });
+    expect(workTitleHref(externalVideoWork)).toBe("/library/family-check-in");
+    expect(workPrimaryAction(externalVideoWork)).toEqual({
+      href: "/library/family-check-in#video",
+      label: "Watch video",
+    });
+
+    const article = work({
+      slug: "ordinary-article",
+      title: "Ordinary Article",
+      date: "2026-08-20",
+      status: "listed",
+      publicationState: "published",
+      type: "article",
+    });
+    expect(workTitleHref(article)).toBe("/library/ordinary-article");
+    expect(workPrimaryAction(article)).toEqual({ href: "/library/ordinary-article", label: "Open" });
+  });
 });
 
 describe("works collection boundaries", () => {
@@ -1932,6 +2082,50 @@ describe("Keystatic Works editor structure", () => {
       worksSection.indexOf("keyTakeaway: fields.text(")
     );
     expect(essentialsSection).not.toContain("fields.object(");
+  });
+
+  it("offers Article, Video, Image / Carousel, and Project update as the primary content types", () => {
+    const typeSection = worksSection.slice(
+      worksSection.indexOf("type: fields.select("),
+      worksSection.indexOf("featured: fields.checkbox(")
+    );
+    expect(typeSection).toContain('{ label: "Article", value: "article" }');
+    expect(typeSection).toContain('{ label: "Video", value: "video" }');
+    expect(typeSection).toContain('{ label: "Image / Carousel", value: "image" }');
+    expect(typeSection).toContain('{ label: "Project update", value: "update" }');
+  });
+
+  it("gives Works an owner-facing external Video URL that is not restricted to one provider", () => {
+    expect(worksSection).toContain("externalVideoUrl: fields.url(");
+    const urlSection = worksSection.slice(worksSection.indexOf("externalVideoUrl: fields.url("));
+    const description = urlSection.slice(0, urlSection.indexOf("}),"));
+    expect(description).toContain("YouTube");
+    expect(description).toContain("Xiaohongshu");
+    expect(description).toContain("any other ordinary https video/player URL");
+    expect(description).not.toContain("must be YouTube");
+  });
+
+  it("defaults the Added date so an owner does not have to type one for routine publishing", () => {
+    const dateSection = worksSection.slice(
+      worksSection.indexOf("date: fields.date("),
+      worksSection.indexOf("publishedDate: fields.date(")
+    );
+    expect(dateSection).toContain('defaultValue: { kind: "today" }');
+  });
+
+  it("generates a stable, URL-safe slug automatically from the title", () => {
+    expect(worksSection).toContain("slug: stableSlug");
+    expect(config).toContain("import { slugifyTitle }");
+    expect(config).toContain("generate: slugifyTitle");
+  });
+
+  it("stores new body images under public/media so they are served correctly, instead of a private per-entry folder", () => {
+    const bodySection = worksSection.slice(
+      worksSection.indexOf("body: fields.markdoc("),
+      worksSection.indexOf("themes: fields.multiselect(")
+    );
+    expect(bodySection).toContain('directory: "public/media/works"');
+    expect(bodySection).toContain('publicPath: "/media/works/"');
   });
 });
 

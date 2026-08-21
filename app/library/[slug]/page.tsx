@@ -13,6 +13,7 @@ import { SiteHeader } from "../../components/SiteHeader";
 import { SiteFooter } from "../../components/SiteFooter";
 import { WorkBody } from "../../components/WorkBody";
 import {
+  ExternalVideoEmbed,
   LibraryMetadata,
   LibraryVideo,
   OriginallyPublished,
@@ -89,6 +90,8 @@ export default async function LibraryItemPage({ params }: PageProps) {
 
         {work.video ? (
           <LibraryVideo src={work.video} title={work.title} poster={cover} />
+        ) : work.externalVideoUrl ? (
+          <ExternalVideoEmbed url={work.externalVideoUrl} title={work.title} />
         ) : null}
 
         {work.annotation ? <p className="work-page__annotation">{work.annotation}</p> : null}

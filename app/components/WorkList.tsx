@@ -8,6 +8,8 @@ const TYPE_LABELS: Record<WorkType, string> = {
   project: "Project",
   video: "Video",
   article: "Article",
+  image: "Image / Carousel",
+  update: "Project update",
   guide: "Guide",
   resource: "Resource",
   other: "Other",
@@ -30,15 +32,15 @@ export function isExternalHref(href: string): boolean {
 
 /** Primary card CTA for Start Here / Explore lists. */
 export function workPrimaryAction(work: Work): { href: string; label: string } {
-  if (work.video) {
+  if (work.video || work.externalVideoUrl) {
     return { href: `${work.workPath}#video`, label: "Watch video" };
   }
   return { href: work.href, label: "Open" };
 }
 
-/** Title / card link: Library page for hosted-video works; otherwise the work href. */
+/** Title / card link: Library page for video works; otherwise the work href. */
 export function workTitleHref(work: Work): string {
-  return work.video ? work.workPath : work.href;
+  return work.video || work.externalVideoUrl ? work.workPath : work.href;
 }
 
 export function WorkItem({

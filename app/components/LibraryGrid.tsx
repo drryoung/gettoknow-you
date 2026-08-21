@@ -5,6 +5,8 @@ const TYPE_LABELS: Partial<Record<WorkType, string>> = {
   story: "Article",
   article: "Article",
   video: "Video",
+  image: "Image / Carousel",
+  update: "Project update",
   practice: "Article",
   project: "Article",
   guide: "Article",

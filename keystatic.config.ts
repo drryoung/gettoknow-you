@@ -13,6 +13,18 @@ import {
   DISTRIBUTION_PLATFORM_OPTIONS,
   ORIGIN_OPTIONS,
 } from "./content/platforms";
+import { slugifyTitle } from "./content/slugify";
+
+/**
+ * Slug generation shared by Works and Themes: stable, lowercase, URL-safe.
+ * Only used when Keystatic generates or regenerates a slug for an entry —
+ * it never rewrites an existing filename/slug on disk.
+ */
+const stableSlug = {
+  generate: slugifyTitle,
+  description:
+    "Generated automatically from the title — lowercase, URL-safe, no manual typing needed. Stable once set: editing the title later does not change it.",
+};
 
 export default config({
   storage: { kind: "local" },
@@ -685,6 +697,7 @@ export default config({
             label: "Title",
             validation: { isRequired: true, length: { min: 1, max: 160 } },
           },
+          slug: stableSlug,
         }),
         status: fields.select({
           label: "Website visibility",
@@ -709,8 +722,9 @@ export default config({
         }),
         date: fields.date({
           label: "Added date",
+          defaultValue: { kind: "today" },
           description:
-            "Required for a public Work. Use the date it was added to GetToKnow.You.",
+            "Defaults to today. Required for a public Work. Use the date it was added to GetToKnow.You.",
         }),
         publishedDate: fields.date({
           label: "Original published date",
@@ -728,19 +742,23 @@ export default config({
             "Summary: video or short Work with a complete summary. Hosted: a substantial article in the body below. Reference: points to an external source.",
         }),
         type: fields.select({
-          label: "Type",
+          label: "Content type",
           options: [
+            { label: "Article", value: "article" },
+            { label: "Video", value: "video" },
+            { label: "Image / Carousel", value: "image" },
+            { label: "Project update", value: "update" },
             { label: "Essay", value: "essay" },
             { label: "Story", value: "story" },
             { label: "Practice", value: "practice" },
             { label: "Project", value: "project" },
-            { label: "Video", value: "video" },
-            { label: "Article", value: "article" },
             { label: "Guide", value: "guide" },
             { label: "Resource", value: "resource" },
             { label: "Other", value: "other" },
           ],
-          defaultValue: "essay",
+          defaultValue: "article",
+          description:
+            "What kind of thing this is. Pick Article, Video, Image / Carousel, or Project update for new material — the older values below remain for existing records.",
         }),
         featured: fields.checkbox({
           label: "Featured",
@@ -756,10 +774,15 @@ export default config({
           validation: { isRequired: true, length: { min: 1, max: 400 } },
         }),
         video: fields.text({
-          label: "Video",
+          label: "Local video file (legacy)",
           description:
-            "The local video file. A video does not require Hosted mode; most video-led Works should use Summary.",
+            "Only for a video file already hosted on this site under /media/. For new Video works, use Video URL below instead — do not upload new video files into the repository.",
           validation: { length: { max: 500 } },
+        }),
+        externalVideoUrl: fields.url({
+          label: "Video URL",
+          description:
+            "Link to where the video is hosted — YouTube, Xiaohongshu, a future dedicated host, or any other ordinary https video/player URL. GetToKnow.You links to and (where supported) embeds this video; it never stores the video file itself.",
         }),
 
         // ============================================================
@@ -792,7 +815,7 @@ export default config({
         body: fields.markdoc({
           label: "Full document body",
           description:
-            "Required when Content mode is Hosted. Leave empty for Summary or Reference records.",
+            "Required when Content mode is Hosted. Leave empty for Summary or Reference records. Also used for transcript/supporting text on Video works, and for carousel images plus captions on Image / Carousel works.",
           extension: "mdoc",
           options: {
             bold: true,
@@ -805,7 +828,10 @@ export default config({
             unorderedList: true,
             table: false,
             link: true,
-            image: true,
+            image: {
+              directory: "public/media/works",
+              publicPath: "/media/works/",
+            },
             divider: true,
             codeBlock: false,
           },
@@ -976,6 +1002,7 @@ export default config({
             validation: { isRequired: true, length: { min: 1, max: 120 } },
           },
           slug: {
+            ...stableSlug,
             label: "URL slug",
             description:
               "Stable public URL segment and work-reference identifier. Do not change casually; title edits do not rewrite this unless you regenerate.",

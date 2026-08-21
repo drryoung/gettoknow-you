@@ -61,6 +61,7 @@ function work(
     project: "gettoknow",
     coverImage: null,
     video: null,
+    externalVideoUrl: null,
     languages: [],
     original: { xiaohongshu: null, instagram: null, substack: null },
     related: [],

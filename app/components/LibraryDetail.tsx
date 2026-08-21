@@ -1,6 +1,7 @@
 import type { Work, WorkDetail } from "../../content/loadWorks";
 import type { Theme } from "../../content/loadThemes";
 import { COLLECTIONS } from "../../content/collections";
+import { resolveVideoEmbed } from "../../content/videoEmbed";
 import { libraryProjectLabel, libraryTypeLabel } from "./LibraryGrid";
 
 function formatDate(isoDate: string): string {
@@ -104,6 +105,37 @@ export function LibraryVideo({
           <a href={src}>Download or open the video file</a>.
         </p>
       </video>
+    </div>
+  );
+}
+
+/**
+ * External video: YouTube renders as an embedded player; every other
+ * provider (Xiaohongshu, a future host, or any other https URL) renders as
+ * a plain link out — embedding those requires a provider-specific player
+ * this site does not assume. See content/videoEmbed.ts.
+ */
+export function ExternalVideoEmbed({ url, title }: { url: string; title: string }) {
+  const info = resolveVideoEmbed(url);
+
+  return (
+    <div id="video" className="library-video">
+      {info.embedUrl ? (
+        <iframe
+          className="library-video__embed"
+          src={info.embedUrl}
+          title={`Video: ${title}`}
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      ) : (
+        <p className="library-video__external">
+          <a href={info.watchUrl} rel="noopener noreferrer">
+            Watch the video
+          </a>
+        </p>
+      )}
     </div>
   );
 }

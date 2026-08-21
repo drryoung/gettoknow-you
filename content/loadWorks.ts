@@ -49,6 +49,8 @@ export const WORK_TYPES = [
   "project",
   "video",
   "article",
+  "image",
+  "update",
   "guide",
   "resource",
   "other",
@@ -105,8 +107,10 @@ export type Work = {
   project: WorkProject;
   /** Cover image path for library cards and heroes. */
   coverImage: string | null;
-  /** Native on-site video path (MP4 under /media/...). */
+  /** Native on-site video path (MP4 under /media/...). Legacy; prefer externalVideoUrl. */
   video: string | null;
+  /** External video host URL (YouTube, XHS, or any other https provider). */
+  externalVideoUrl: string | null;
   /** Languages present in the material. */
   languages: WorkLanguage[];
   /** Optional discovery links to the original social posts. */
@@ -192,6 +196,7 @@ export type WorkEntryInput = {
   thumbnail?: string | null;
   coverImage?: string | null;
   video?: string | null;
+  externalVideoUrl?: string | null;
   languages?: ReadonlyArray<string | null> | null;
   project?: string | null;
   originalXiaohongshu?: string | null;
@@ -265,6 +270,16 @@ function normalizeOptionalUrl(value: string | null | undefined): string | null {
   const trimmed = value?.trim() || "";
   if (!trimmed) return null;
   return isExternalHref(trimmed) && isUsablePublicHref(trimmed) ? trimmed : null;
+}
+
+/**
+ * External video URL: any ordinary usable https(s) link. Deliberately not
+ * restricted to a specific provider (YouTube, XHS, a future host, or any
+ * other ordinary video/player URL are all accepted); provider-specific
+ * embedding is resolved separately in content/videoEmbed.ts.
+ */
+function normalizeExternalVideoUrl(value: string | null | undefined): string | null {
+  return normalizeOptionalUrl(value);
 }
 
 function isWorkType(value: string): value is WorkType {
@@ -601,6 +616,7 @@ function buildWorkRecord(input: WorkEntryInput): Work | null {
     project,
     coverImage,
     video: normalizeMediaPath(input.video),
+    externalVideoUrl: normalizeExternalVideoUrl(input.externalVideoUrl),
     languages: normalizeLanguages(input.languages),
     original: {
       xiaohongshu: normalizeOptionalUrl(input.originalXiaohongshu),
@@ -958,6 +974,7 @@ type RawWorksEntry = {
     thumbnail?: string | null;
     coverImage?: string | null;
     video?: string | null;
+    externalVideoUrl?: string | null;
     languages?: ReadonlyArray<string | null> | null;
     project?: string | null;
     originalXiaohongshu?: string | null;
@@ -1012,6 +1029,7 @@ function entryToInput(
     thumbnail: entry.thumbnail,
     coverImage: entry.coverImage,
     video: entry.video,
+    externalVideoUrl: entry.externalVideoUrl,
     languages: entry.languages,
     project: entry.project,
     originalXiaohongshu: entry.originalXiaohongshu,
