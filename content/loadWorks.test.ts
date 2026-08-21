@@ -7,12 +7,14 @@ import {
   getPublicWorkDetail,
   getRelatedWorks,
   getStartHereWorks,
+  getWorkEligibilityReports,
   hasUsablePublicDestination,
   inferContentMode,
   isCollectionPubliclyBrowsable,
   isPublicStartHereEligible,
   isPublicWorkPageEligible,
   isPubliclyEligible,
+  isPublishedContentValid,
   isUsablePublicHref,
   markdocNodeHasContent,
   normalizeWork,
@@ -1254,29 +1256,62 @@ describe("getListedWorks", () => {
   });
 
   it("exposes only genuinely published public works in the Library", async () => {
-    // This reflects Raymond's current deliberate Listed + Published edits,
-    // including the video works corrected from Hosted to Summary (see
-    // "reflects corrected contentMode for video works" below) — not an
-    // older, now-obsolete fixed count.
+    // Known published works must remain public. Extra published works are
+    // allowed so ordinary Keystatic publishing does not require a test edit.
+    const requiredPublicSlugs = [
+      "before-you-build",
+      "conversation-missed-opportunity",
+      "englishos",
+      "englishos-you-can-answer-but-can-you-continue",
+      "gettoknowyou-community-charter",
+      "mandarinos",
+      "outsider",
+      "real-time-language-training-needed",
+      "the-dunedin-checkout-success-story",
+      "tried-everything-but-still-can-t-speak",
+      "vocab-not-enough",
+    ];
     const works = await getPublicLibraryWorks();
-    const slugs = works.map((w) => w.slug).sort();
-    expect(slugs).toEqual(
-      [
-        "before-you-build",
-        "conversation-missed-opportunity",
-        "englishos",
-        "englishos-you-can-answer-but-can-you-continue",
-        "gettoknowyou-community-charter",
-        "mandarinos",
-        "outsider",
-        "real-time-language-training-needed",
-        "the-dunedin-checkout-success-story",
-        "tried-everything-but-still-can-t-speak",
-        "vocab-not-enough",
-      ].sort()
-    );
+    const slugs = works.map((w) => w.slug);
+    expect(slugs).toEqual(expect.arrayContaining(requiredPublicSlugs));
     expect(works.every((w) => w.publicationState === "published")).toBe(true);
     expect(works.every((w) => w.status === "listed")).toBe(true);
+  });
+
+  it("admits into the Library only works that satisfy public eligibility rules", async () => {
+    const publicWorks = await getPublicLibraryWorks();
+    const reports = await getWorkEligibilityReports();
+    expect(publicWorks.length).toBeGreaterThan(0);
+    expect(reports.length).toBeGreaterThan(publicWorks.length);
+
+    for (const work of publicWorks) {
+      expect(work.status).toBe("listed");
+      expect(work.publicationState).toBe("published");
+      expect(isPublishedContentValid(work)).toBe(true);
+      expect(isPubliclyEligible(work)).toBe(true);
+      if (work.contentMode === "hosted") expect(work.hasBody).toBe(true);
+      if (work.contentMode === "summary") expect(work.summary.trim().length).toBeGreaterThanOrEqual(20);
+      if (work.contentMode === "reference") {
+        expect(work.externalUrl && isUsablePublicHref(work.externalUrl)).toBeTruthy();
+      }
+    }
+
+    const publicSlugs = publicWorks.map((work) => work.slug).sort();
+    const eligibleSlugs = reports.filter((report) => report.eligible).map((report) => report.slug).sort();
+    expect(publicSlugs).toEqual(eligibleSlugs);
+
+    const ineligible = reports.filter((report) => !report.eligible);
+    expect(ineligible.length).toBeGreaterThan(0);
+    for (const report of ineligible) {
+      expect(publicSlugs).not.toContain(report.slug);
+    }
+    for (const report of reports) {
+      const leaked =
+        report.status !== "listed" ||
+        report.publicationState !== "published" ||
+        report.eligible === false;
+      if (leaked) expect(publicSlugs).not.toContain(report.slug);
+    }
   });
 
   it("loads legacy records without origin/canonicalPlatform via normalizeWork", () => {
