@@ -1263,6 +1263,7 @@ describe("getListedWorks", () => {
       "conversation-missed-opportunity",
       "englishos",
       "englishos-you-can-answer-but-can-you-continue",
+      "englishos-zh",
       "gettoknowyou-community-charter",
       "mandarinos",
       "outsider",
