@@ -22,8 +22,10 @@ ecosystem:
       learners.
   - label: EnglishOS
     text: >-
-      An emerging second implementation, being developed now, for people who
-      know English but struggle to sustain and deepen real conversations.
+      The second ConversationOS implementation, in development and testing—helping
+      people use the English they already know to continue conversations, build
+      trust, and deepen relationships. It complements conventional English and
+      Business English training rather than replacing it.
   - label: Raymond Young
     text: The founder and personal voice behind the work.
 bioHeading: Raymond Young
